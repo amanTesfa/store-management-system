@@ -1,0 +1,87 @@
+# Visual Studio
+.vs/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# Build results
+[Bb]in/
+[Oo]bj/
+out/
+publish/
+artifacts/
+*.nupkg
+
+# Rider
+.idea/
+*.sln.iml
+
+# VS Code
+.vscode/
+
+# Dotnet
+project.lock.json
+project.fragment.lock.json
+*.dotCover
+*.dotCover.*.xml
+
+# Runtime / build artifacts
+*.dll
+*.exe
+*.pdb
+*.cache
+*.ilk
+*.log
+*.vsix
+*.appx
+*.appxupload
+
+# NuGet
+*.nupkg
+packages/
+.nuget/packages/
+
+# Test results
+TestResults/
+coverage/
+coverage*.xml
+*.trx
+
+# Entity Framework
+*.db
+*.mdf
+*.ldf
+efmigrations/
+
+# ASP.NET / Razor
+wwwroot/lib/
+wwwroot/uploads/
+uploads/
+node_modules/
+
+# Client-side build artifacts
+/dist/
+*.map
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# User-specific files
+*.user
+*.userosscache
+*.suo
+*.dbmdl
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# JetBrains Rider caches
+.idea/
+*.iml
+
+# Temporary files
+*.temp
+*.tmp

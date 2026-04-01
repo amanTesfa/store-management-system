@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Store_Management_System.Models;
 
@@ -6,27 +6,46 @@ namespace Store_Management_System.Controllers
 {
     public class HomeController : Controller
     {
-        private readonly ILogger<HomeController> _logger;
+        private readonly InventoryDbContext _context;
 
-        public HomeController(ILogger<HomeController> logger)
+        public HomeController(InventoryDbContext context)
         {
-            _logger = logger;
+            _context = context;
+        }
+
+        // Demo page to preview the Tailwind ERP theme (non-destructive)
+        public IActionResult ErpTailwindDemo()
+        {
+            ViewData["Title"] = "ERP Theme Demo";
+            return View("ErpTailwindDemo");
         }
 
         public IActionResult Index()
         {
+            if (User.Identity.IsAuthenticated)
+            {
+                ViewBag.Welcome = $"Welcome back, {User.Identity.Name}!";
+
+                // Show dashboard stats for authenticated users
+                ViewBag.TotalProducts = _context.Products.Count(p => !p.IsDeleted);
+                ViewBag.LowStock = _context.Products.Count(p => !p.IsDeleted && p.CurrentStock <= p.ReorderLevel);
+                ViewBag.TotalOrders = _context.Orders.Count();
+                ViewBag.RecentOrders = _context.Orders.OrderByDescending(o => o.OrderDate).Take(5).ToList();
+            }
+
             return View();
         }
 
-        public IActionResult Privacy()
+        [Authorize]
+        public IActionResult Dashboard()
         {
             return View();
         }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        [Authorize]
+        public IActionResult Profile()
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            return View();
         }
     }
 }

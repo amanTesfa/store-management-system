@@ -1,0 +1,153 @@
+/* ERP plain CSS to replace Tailwind utilities used in demo and partials
+   Purpose: provide standalone stylesheet without Tailwind dependency.
+   This file targets classes used by the demo and partials and provides a coherent ERP theme.
+*/
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600&family=Manrope:wght@600;800&display=swap');
+
+:root{
+  --erp-primary: #005EB8;
+  --erp-accent-from: #1fb6ff;
+  --erp-accent-to: #6f4ff2;
+  --erp-muted: #6b7280;
+  --erp-bg: #f8fafc; /* slate-50 */
+  --panel: #ffffff;
+  --border: #e6edf3; /* slate-200 */
+}
+
+/* Base */
+html,body{height:100%;}
+body{margin:0;font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial;background:var(--erp-bg);color:#0f1724}
+
+.font-manrope{font-family:Manrope, Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial}
+.font-inter{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial}
+
+/* Utility classes used in demo (minimal subset) */
+.min-h-screen{min-height:100vh}
+.bg-slate-50{background:var(--erp-bg)}
+.bg-white{background:var(--panel)}
+.pt-16{padding-top:4rem}
+.pl-64{padding-left:16rem}
+.p-6{padding:1.5rem}
+.p-4{padding:1rem}
+.p-5{padding:1.25rem}
+.p-3{padding:.75rem}
+.p-2{padding:.5rem}
+.px-6{padding-left:1.5rem;padding-right:1.5rem}
+.mx-auto{margin-left:auto;margin-right:auto}
+.max-w-7xl{max-width:1200px}
+.text-sm{font-size:.9rem}
+.text-xs{font-size:.78rem}
+.text-lg{font-size:1.125rem}
+.text-xl{font-size:1.25rem}
+.text-slate-500{color:var(--erp-muted)}
+.text-slate-600{color:#374151}
+.text-slate-800{color:#0f1724}
+.rounded-lg{border-radius:12px}
+.rounded-md{border-radius:6px}
+.border{border:1px solid var(--border)}
+.border-slate-200{border-color:var(--border)}
+
+.hidden{display:none}
+.flex{display:flex}
+.items-center{align-items:center}
+.justify-between{justify-content:space-between}
+.gap-3{gap:.75rem}
+.gap-4{gap:1rem}
+.gap-6{gap:1.5rem}
+
+/* Simple grid system used by demo */
+.grid{display:grid}
+.grid-cols-12{grid-template-columns:repeat(12,1fr)}
+.gap-6{gap:1.5rem}
+.col-span-3{grid-column:span 3/span 3}
+.col-span-4{grid-column:span 4/span 4}
+.col-span-8{grid-column:span 8/span 8}
+.col-span-9{grid-column:span 9/span 9}
+.col-span-12{grid-column:span 12/span 12}
+.col-span-1{grid-column:span 1/span 1}
+
+/* responsive helpers */
+@media (min-width:1024px){
+  .lg\:block{display:block}
+  .lg\:pl-64{padding-left:16rem}
+}
+
+/* Sidebar */
+.erp-sidebar{position:fixed;left:0;top:0;bottom:0;width:260px;padding:24px;background:var(--panel);border-right:1px solid var(--border);overflow:auto;z-index:40}
+.erp-sidebar .brand-logo{width:44px;height:44px;border-radius:8px;background:linear-gradient(90deg,var(--erp-accent-from),var(--erp-accent-to));box-shadow:0 6px 20px rgba(111,79,242,0.12)}
+.erp-sidebar .text-slate-700{color:#0f1724}
+.erp-sidebar nav a{display:flex;align-items:center;gap:.75rem;padding:.5rem;border-radius:8px;color:#475569;text-decoration:none}
+.erp-sidebar nav a:hover{background:#f8fafc}
+.erp-sidebar .mt-6{margin-top:1.5rem}
+.erp-sidebar .pt-6{padding-top:1.5rem}
+.erp-sidebar .brand-title{font-weight:700;font-size:14px}
+
+/* Topbar */
+.erp-topbar{position:fixed;left:0;right:0;top:0;height:56px;display:flex;align-items:center;padding:0 1.5rem;background:rgba(255,255,255,0.95);backdrop-filter:blur(6px);border-bottom:1px solid var(--border);z-index:50}
+.erp-topbar .search{display:flex;align-items:center;background:#f1f5f9;border-radius:8px;border:1px solid #edf2f7;overflow:hidden}
+.erp-topbar input[type=text]{border:0;background:transparent;padding:.5rem .75rem;outline:none}
+.erp-topbar .avatar{width:36px;height:36px;border-radius:999px;background:linear-gradient(90deg,#f97316,#ef4444)}
+
+/* Main content area - account for fixed sidebar & topbar */
+.erp-main{margin-left:260px;padding-top:72px;padding-left:1.5rem;padding-right:1.5rem;min-height:100vh}
+@media (max-width:1023px){
+  .erp-sidebar{display:none}
+  .erp-main{margin-left:0;padding-top:72px}
+}
+
+/* Cards and panels */
+.card, .panel{background:var(--panel);border-radius:12px;border:1px solid var(--border);padding:1rem;box-shadow:0 6px 24px rgba(15,23,42,0.04)}
+.panel .panel-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem}
+
+/* Stat grid */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem}
+@media (max-width:991px){.stat-grid{grid-template-columns:repeat(2,1fr)}}
+.stat-card{background:var(--panel);border-radius:12px;padding:1rem;border:1px solid rgba(15,40,90,0.03)}
+.stat-card .value{font-weight:700;font-size:1.25rem;color:var(--erp-primary)}
+.stat-card .label{color:var(--erp-muted);font-size:.85rem}
+
+/* Buttons */
+.btn{display:inline-flex;align-items:center;gap:.5rem;padding:.5rem .75rem;border-radius:8px;border:1px solid transparent;cursor:pointer}
+.btn-ghost{background:transparent;border:1px solid var(--border);color:#334155}
+.btn-outline{background:white;border:1px solid #cbd5e1;color:#334155}
+.btn-primary{background:linear-gradient(90deg,var(--erp-accent-from),var(--erp-accent-to));color:#fff}
+.btn-erp{background:linear-gradient(90deg,var(--erp-accent-from),var(--erp-accent-to));color:#fff;border-radius:8px;padding:.5rem .9rem}
+.btn-small{padding:.35rem .5rem;font-size:.9rem}
+
+/* Table */
+.table{width:100%;border-collapse:collapse}
+.table th{font-weight:600;color:#475569;text-align:left;padding:.75rem;border-bottom:1px solid #edf2f7}
+.table td{padding:.75rem;border-top:1px solid #f1f5f9;color:#374151}
+.table tbody tr:hover{background:#f8fafc}
+
+/* Badges */
+.badge-damage{display:inline-block;padding:.25rem .5rem;border-radius:999px;background:#fee2e2;color:#b91c1c;font-size:.75rem}
+.badge-found{display:inline-block;padding:.25rem .5rem;border-radius:999px;background:#eff6ff;color:#0369a1;font-size:.75rem}
+
+/* File input / upload */
+.input-file-hidden input[type=file]{display:none}
+.upload-drop{border:2px dashed var(--border);padding:1rem;border-radius:8px;text-align:center;color:var(--erp-muted)}
+.upload-drop:hover{background:#fbfdff}
+
+/* Minor helpers */
+.overflow-x-auto{overflow-x:auto}
+.divide-y > * + *{border-top:1px solid #f1f5f9}
+.text-muted{color:var(--erp-muted)}
+
+/* Utility hover/transition */
+.hover-scale{transition:all .12s ease}
+.hover-scale:hover{transform:scale(.99)}
+
+/* small responsive adjustments */
+@media (max-width:575px){
+  .erp-topbar .search{display:none}
+  .stat-grid{grid-template-columns:repeat(1,1fr)}
+}
+
+/* Ensure demo-specific selectors used in views */
+.main-demo{max-width:1200px;margin:0 auto;padding:1.5rem}
+
+/* compatibility class name for earlier erp-tailwind usage */
+.erp-with-tailwind-sidebar{padding-left:260px}
+
+/* end of erp-plain.css */

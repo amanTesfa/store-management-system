@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Store_Management_System.Models;
@@ -26,14 +27,22 @@ namespace Store_Management_System.Controllers
 
         // GET: /Account/Login
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult Login(string returnUrl = null)
         {
+            // If user is already logged in, redirect to dashboard
+            if (User.Identity.IsAuthenticated)
+            {
+                return RedirectToAction("Index", "Home");
+            }
+
             ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
-        // POST: /Account/Login
+        // Update the Login POST method to redirect to dashboard
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Login(LoginViewModel model, string returnUrl = null)
         {
@@ -43,17 +52,15 @@ namespace Store_Management_System.Controllers
                 var result = await _signInManager.PasswordSignInAsync(model.Username, model.Password, model.RememberMe, lockoutOnFailure: false);
                 if (result.Succeeded)
                 {
-                    return RedirectToLocal(returnUrl);
+                    return RedirectToLocal(returnUrl) ?? RedirectToAction("Index", "Home");
                 }
                 else
                 {
                     ModelState.AddModelError(string.Empty, "Invalid login attempt.");
-                    return View(model);
                 }
             }
             return View(model);
         }
-
         // GET: /Account/Register
         [HttpGet]
         public IActionResult Register()
@@ -63,6 +70,7 @@ namespace Store_Management_System.Controllers
 
         // POST: /Account/Register
         [HttpPost]
+        [AllowAnonymous]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Register(RegisterViewModel model)
         {
@@ -81,9 +89,7 @@ namespace Store_Management_System.Controllers
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
-                    // Assign default "Staff" role
                     await _userManager.AddToRoleAsync(user, "Staff");
-
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return RedirectToAction("Index", "Home");
                 }
@@ -101,7 +107,18 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            return RedirectToAction("Index", "Home");
+            // Redirect to the welcome page after logout
+            return RedirectToAction("Welcome", "Home");
+        }
+
+        // GET: /Account/Logout
+        // Fallback: allow GET sign-out for environments where the POST is not issuing correctly.
+        // Note: GET logout is less secure (CSRF risk). Keep POST form as primary method.
+        [HttpGet]
+        public async Task<IActionResult> LogoutGet()
+        {
+            await _signInManager.SignOutAsync();
+            return RedirectToAction("Welcome", "Home");
         }
 
         // GET: /Account/AccessDenied

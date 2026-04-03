@@ -97,7 +97,7 @@ app.UseSession();
 // Map default controller route
 app.MapControllerRoute(
     name: "default",
-    pattern: "{controller=Home}/{action=Index}/{id?}");
+    pattern: "{controller=Home}/{action=Welcome}/{id?}");
 
 // Seed initial data - Create admin user and roles if they don't exist
 using (var scope = app.Services.CreateScope())

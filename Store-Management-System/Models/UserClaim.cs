@@ -1,11 +1,17 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System;
+using System.Collections.Generic;
 
-namespace StoreManagementSystem.Models
+namespace Store_Management_System.Models;
+
+public partial class UserClaim
 {
-    public class UserClaim : IdentityUserClaim<int>
-    {
-        // No additional properties needed
-        // IdentityUserClaim<int> already includes:
-        // Id, UserId, ClaimType, ClaimValue
-    }
+    public int Id { get; set; }
+
+    public int UserId { get; set; }
+
+    public string? ClaimType { get; set; }
+
+    public string? ClaimValue { get; set; }
+
+    public virtual User User { get; set; } = null!;
 }

@@ -9,8 +9,8 @@ builder.Services.AddControllersWithViews();
 
 // Configure DbContext - Database First Approach
 // This connects to your existing database with clean table names
-builder.Services.AddDbContext<InventoryDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+//builder.Services.AddDbContext<InventoryDbContext>(options =>
+//    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
 // Configure Identity with your custom models (database-first with clean table names)
 builder.Services.AddIdentity<User, Role>(options =>
@@ -35,7 +35,7 @@ builder.Services.AddIdentity<User, Role>(options =>
     options.SignIn.RequireConfirmedEmail = false;
     options.SignIn.RequireConfirmedPhoneNumber = false;
 })
-.AddEntityFrameworkStores<InventoryDbContext>()
+//.AddEntityFrameworkStores<InventoryDbContext>()
 .AddDefaultTokenProviders();
 
 // Configure cookie authentication
@@ -210,11 +210,11 @@ using (var scope = app.Services.CreateScope())
         }
 
         // Check if database has any products (optional - for empty database)
-        var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-        if (!dbContext.Products.Any())
-        {
-            logger.LogInformation("Database has no products. Consider adding sample data.");
-        }
+        //var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+        //if (!dbContext.Products.Any())
+        //{
+        //    logger.LogInformation("Database has no products. Consider adding sample data.");
+        //}
     }
     catch (Exception ex)
     {

@@ -147,10 +147,10 @@
                         Inventory
                     </li>
 
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Products" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Products" asp-action="Index">
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Articles" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="Articles" asp-action="Index">
                             <i class="align-middle" data-feather="box"></i>
-                            <span class="align-middle">Products</span>
+                            <span class="align-middle">Articles</span>
                         </a>
                     </li>
 
@@ -193,7 +193,7 @@
                             <span class="align-middle">Customers</span>
                         </a>
                     </li>
-
+                     n
                     <!-- REPORTS -->
                     <li class="sidebar-header">
                         Reports

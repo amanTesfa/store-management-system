@@ -1,11 +1,17 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System;
+using System.Collections.Generic;
 
-namespace Store_Management_System.Models
+namespace Store_Management_System.Models;
+
+public partial class RoleClaim
 {
-    public class RoleClaim : IdentityRoleClaim<int>
-    {
-        // No additional properties needed
-        // IdentityRoleClaim<int> already includes:
-        // Id, RoleId, ClaimType, ClaimValue
-    }
+    public int Id { get; set; }
+
+    public int RoleId { get; set; }
+
+    public string? ClaimType { get; set; }
+
+    public string? ClaimValue { get; set; }
+
+    public virtual Role Role { get; set; } = null!;
 }

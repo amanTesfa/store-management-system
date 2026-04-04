@@ -76,7 +76,8 @@ public partial class Article
     public int? CreatedBy { get; set; }
 
     public int? UpdatedBy { get; set; }
-
+    public virtual Category? Category { get; set; }
+    public virtual ICollection<ArticleBarcode> Barcodes { get; set; } = new List<ArticleBarcode>();
     public virtual ICollection<ArticleBarcode> ArticleBarcodes { get; set; } = new List<ArticleBarcode>();
 
     public virtual ICollection<ArticlePrice> ArticlePrices { get; set; } = new List<ArticlePrice>();

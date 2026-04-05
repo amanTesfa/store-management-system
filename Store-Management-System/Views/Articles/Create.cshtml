@@ -1,6 +1,4 @@
-﻿@using Store_Management_System.ViewModels
-@model ArticleCreateViewModel
-
+﻿@model Store_Management_System.ViewModels.ArticleCreateViewModel
 @{
     ViewData["Title"] = "Add New Article";
 }
@@ -53,11 +51,11 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="CategoryId" class="form-label">Category *</label>
-                                <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.Categories">
+                                <label asp-for="ArticleCategory" class="form-label">Category *</label>
+                                <select asp-for="ArticleCategory" class="form-select" asp-items="ViewBag.Categories">
                                     <option value="">-- Select Category --</option>
                                 </select>
-                                <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                                <span asp-validation-for="ArticleCategory" class="text-danger small"></span>
                             </div>
                         </div>
                         <div class="col-md-6">

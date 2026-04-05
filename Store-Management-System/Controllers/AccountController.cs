@@ -11,14 +11,14 @@ namespace Store_Management_System.Controllers
 {
     public class AccountController : Controller
     {
-        private readonly UserManager<User> _userManager;
-        private readonly SignInManager<User> _signInManager;
-        private readonly RoleManager<Role> _roleManager;
+        private readonly UserManager<ApplicationUser> _userManager;
+        private readonly SignInManager<ApplicationUser> _signInManager;
+        private readonly RoleManager<ApplicationRole> _roleManager;
 
         public AccountController(
-            UserManager<User> userManager,
-            SignInManager<User> signInManager,
-            RoleManager<Role> roleManager)
+            UserManager<ApplicationUser> userManager,
+            SignInManager<ApplicationUser> signInManager,
+            RoleManager<ApplicationRole> roleManager)
         {
             _userManager = userManager;
             _signInManager = signInManager;
@@ -30,17 +30,14 @@ namespace Store_Management_System.Controllers
         [AllowAnonymous]
         public IActionResult Login(string returnUrl = null)
         {
-            // If user is already logged in, redirect to dashboard
             if (User.Identity.IsAuthenticated)
-            {
                 return RedirectToAction("Index", "Home");
-            }
 
             ViewData["ReturnUrl"] = returnUrl;
             return View();
         }
 
-        // Update the Login POST method to redirect to dashboard
+        // POST: /Account/Login
         [HttpPost]
         [AllowAnonymous]
         [ValidateAntiForgeryToken]
@@ -61,8 +58,10 @@ namespace Store_Management_System.Controllers
             }
             return View(model);
         }
+
         // GET: /Account/Register
         [HttpGet]
+        [AllowAnonymous]
         public IActionResult Register()
         {
             return View();
@@ -76,7 +75,7 @@ namespace Store_Management_System.Controllers
         {
             if (ModelState.IsValid)
             {
-                var user = new User
+                var user = new ApplicationUser
                 {
                     UserName = model.Username,
                     Email = model.Email,
@@ -89,6 +88,7 @@ namespace Store_Management_System.Controllers
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
+                    // Assign default role "Staff" instead of "admin"
                     await _userManager.AddToRoleAsync(user, "Staff");
                     await _signInManager.SignInAsync(user, isPersistent: false);
                     return RedirectToAction("Index", "Home");
@@ -107,13 +107,10 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Logout()
         {
             await _signInManager.SignOutAsync();
-            // Redirect to the welcome page after logout
             return RedirectToAction("Welcome", "Home");
         }
 
-        // GET: /Account/Logout
-        // Fallback: allow GET sign-out for environments where the POST is not issuing correctly.
-        // Note: GET logout is less secure (CSRF risk). Keep POST form as primary method.
+        // GET: /Account/Logout (fallback)
         [HttpGet]
         public async Task<IActionResult> LogoutGet()
         {
@@ -131,13 +128,9 @@ namespace Store_Management_System.Controllers
         private IActionResult RedirectToLocal(string returnUrl)
         {
             if (Url.IsLocalUrl(returnUrl))
-            {
                 return Redirect(returnUrl);
-            }
             else
-            {
                 return RedirectToAction("Index", "Home");
-            }
         }
     }
 }

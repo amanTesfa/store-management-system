@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Identity;
+﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Store_Management_System.Models;
 
@@ -7,13 +7,16 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container
 builder.Services.AddControllersWithViews();
 
-// Configure DbContext - Database First Approach
-// This connects to your existing database with clean table names
+// 1. Register the scaffolded business DbContext (unchanged)
 builder.Services.AddDbContext<InventoryDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Configure Identity with your custom models (database-first with clean table names)
-builder.Services.AddIdentity<User, Role>(options =>
+// 2. Register the Identity DbContext (uses the same connection string)
+builder.Services.AddDbContext<AppIdentityDbContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+
+// 3. Configure Identity to use ApplicationUser, ApplicationRole, and AppIdentityDbContext
+builder.Services.AddIdentity<ApplicationUser, ApplicationRole>(options =>
 {
     // Password settings
     options.Password.RequireDigit = true;
@@ -35,7 +38,7 @@ builder.Services.AddIdentity<User, Role>(options =>
     options.SignIn.RequireConfirmedEmail = false;
     options.SignIn.RequireConfirmedPhoneNumber = false;
 })
-//.AddEntityFrameworkStores<InventoryDbContext>()
+.AddEntityFrameworkStores<AppIdentityDbContext>()   // Use the Identity context
 .AddDefaultTokenProviders();
 
 // Configure cookie authentication
@@ -50,7 +53,7 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
 });
 
-// Optional: Configure session if needed
+// Optional: Session and authorization policies
 builder.Services.AddSession(options =>
 {
     options.IdleTimeout = TimeSpan.FromMinutes(30);
@@ -58,17 +61,37 @@ builder.Services.AddSession(options =>
     options.Cookie.IsEssential = true;
 });
 
-// Optional: Add authorization policies
 builder.Services.AddAuthorization(options =>
 {
-    options.AddPolicy("AdminOnly", policy =>
-        policy.RequireRole("Admin"));
-
-    options.AddPolicy("ManagerOnly", policy =>
-        policy.RequireRole("Admin", "Manager"));
+    options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Admin", "Manager"));
 });
 
 var app = builder.Build();
+
+// Test database connection (using InventoryDbContext)
+using (var scope = app.Services.CreateScope())
+{
+    var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
+    try
+    {
+        var canConnect = await dbContext.Database.CanConnectAsync();
+        if (canConnect)
+        {
+            Console.WriteLine("✅ Business database connection successful.");
+            var articleCount = await dbContext.Articles.CountAsync();
+            Console.WriteLine($"   Articles count: {articleCount}");
+        }
+        else
+        {
+            Console.WriteLine("❌ Business database connection failed.");
+        }
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"❌ Database error: {ex.Message}");
+    }
+}
 
 // Configure the HTTP request pipeline
 if (!app.Environment.IsDevelopment())
@@ -78,143 +101,80 @@ if (!app.Environment.IsDevelopment())
 }
 else
 {
-    // Show detailed errors in development
     app.UseDeveloperExceptionPage();
 }
 
 app.UseHttpsRedirection();
 app.UseStaticFiles();
-
 app.UseRouting();
-
-// IMPORTANT: Order matters - Authentication before Authorization
 app.UseAuthentication();
 app.UseAuthorization();
-
-// Optional: Use session if you added it
 app.UseSession();
 
-// Map default controller route
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Welcome}/{id?}");
 
-// Seed initial data - Create admin user and roles if they don't exist
+// Seed initial data (roles and users) using Identity (ApplicationUser, ApplicationRole)
 using (var scope = app.Services.CreateScope())
 {
-    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
-    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<Role>>();
+    var userManager = scope.ServiceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+    var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<ApplicationRole>>();
     var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
     try
     {
         // Seed Roles
         string[] roleNames = { "Admin", "Manager", "Staff" };
-
         foreach (var roleName in roleNames)
         {
             if (!await roleManager.RoleExistsAsync(roleName))
             {
-                var role = new Role
-                {
-                    Name = roleName,
-                    Description = roleName == "Admin" ? "Full system access" :
-                                  roleName == "Manager" ? "Can manage inventory and orders" :
-                                  "Can view and process orders"
-                };
-
+                var role = new ApplicationRole { Name = roleName };
                 var result = await roleManager.CreateAsync(role);
                 if (result.Succeeded)
-                {
                     logger.LogInformation($"Created role: {roleName}");
+                else
+                    logger.LogError($"Failed to create role {roleName}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
+            }
+        }
+
+        // Helper to create a user
+        async Task CreateUserIfNotExists(string userName, string email, string password, string firstName, string lastName, string role)
+        {
+            var user = await userManager.FindByNameAsync(userName);
+            if (user == null)
+            {
+                user = new ApplicationUser
+                {
+                    UserName = userName,
+                    Email = email,
+                    FirstName = firstName,
+                    LastName = lastName,
+                    CreatedAt = DateTime.UtcNow,
+                    IsActive = true,
+                    EmailConfirmed = true,
+                    LockoutEnabled = false
+                };
+                var result = await userManager.CreateAsync(user, password);
+                if (result.Succeeded)
+                {
+                    await userManager.AddToRoleAsync(user, role);
+                    logger.LogInformation($"Created user '{userName}' with role '{role}'");
                 }
                 else
                 {
-                    logger.LogError($"Failed to create role {roleName}: {string.Join(", ", result.Errors)}");
+                    var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                    logger.LogError($"Failed to create user {userName}: {errors}");
                 }
             }
         }
 
-        // Seed Admin User
-        var adminUser = await userManager.FindByNameAsync("admin");
-        if (adminUser == null)
-        {
-            adminUser = new User
-            {
-                UserName = "admin",
-                Email = "admin@inventory.com",
-                FirstName = "System",
-                LastName = "Administrator",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                EmailConfirmed = true,  // Admin doesn't need email confirmation
-                LockoutEnabled = false   // Admin shouldn't be locked out
-            };
-
-            var result = await userManager.CreateAsync(adminUser, "Admin@123");
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(adminUser, "Admin");
-                logger.LogInformation("Created admin user with Admin role");
-            }
-            else
-            {
-                logger.LogError($"Failed to create admin user: {string.Join(", ", result.Errors)}");
-            }
-        }
-
-        // Seed a demo manager user (optional)
-        var managerUser = await userManager.FindByNameAsync("manager");
-        if (managerUser == null)
-        {
-            managerUser = new User
-            {
-                UserName = "manager",
-                Email = "manager@inventory.com",
-                FirstName = "Demo",
-                LastName = "Manager",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                EmailConfirmed = true
-            };
-
-            var result = await userManager.CreateAsync(managerUser, "Manager@123");
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(managerUser, "Manager");
-                logger.LogInformation("Created demo manager user");
-            }
-        }
-
-        // Seed a demo staff user (optional)
-        var staffUser = await userManager.FindByNameAsync("staff");
-        if (staffUser == null)
-        {
-            staffUser = new User
-            {
-                UserName = "staff",
-                Email = "staff@inventory.com",
-                FirstName = "Demo",
-                LastName = "Staff",
-                CreatedAt = DateTime.UtcNow,
-                IsActive = true,
-                EmailConfirmed = true
-            };
-
-            var result = await userManager.CreateAsync(staffUser, "Staff@123");
-            if (result.Succeeded)
-            {
-                await userManager.AddToRoleAsync(staffUser, "Staff");
-                logger.LogInformation("Created demo staff user");
-            }
-        }
-
-        // Check if database has any products (optional - for empty database)
-        var dbContext = scope.ServiceProvider.GetRequiredService<InventoryDbContext>();
-        if (!dbContext.Products.Any())
-        {
-            logger.LogInformation("Database has no products. Consider adding sample data.");
-        }
+        // Create admin users
+        await CreateUserIfNotExists("admin", "admin@inventory.com", "Admin@123", "System", "Administrator", "Admin");
+        await CreateUserIfNotExists("admin2", "admin2@example.com", "Admin2@123", "Second", "Admin", "Admin");
+        await CreateUserIfNotExists("manager", "manager@inventory.com", "Manager@123", "Demo", "Manager", "Manager");
+        await CreateUserIfNotExists("staff", "staff@inventory.com", "Staff@123", "Demo", "Staff", "Staff");
     }
     catch (Exception ex)
     {

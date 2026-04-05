@@ -13,7 +13,7 @@ public partial class Article
 
     public string ArticleType { get; set; } = null!;
 
-    public string? ArticleCategory { get; set; }
+    public int? ArticleCategory { get; set; }
 
     public string? ArticleGroup { get; set; }
 
@@ -77,7 +77,7 @@ public partial class Article
 
     public int? UpdatedBy { get; set; }
     public virtual Category? Category { get; set; }
-    public virtual ICollection<ArticleBarcode> Barcodes { get; set; } = new List<ArticleBarcode>();
+  
     public virtual ICollection<ArticleBarcode> ArticleBarcodes { get; set; } = new List<ArticleBarcode>();
 
     public virtual ICollection<ArticlePrice> ArticlePrices { get; set; } = new List<ArticlePrice>();

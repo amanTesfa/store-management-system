@@ -1,7 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
-public class ArticleCreateViewModel
+public class ArticleCreateViewModel2
 {
     // Auto-generated, read-only
     [Display(Name = "Article Code")]

@@ -81,7 +81,7 @@ namespace Store_Management_System.Controllers
         // GET: Articles/Create
         public async Task<IActionResult> Create()
         {
-            var model = new ArticleCreateViewModel
+            var model = new Store_Management_System.ViewModels.ArticleCreateViewModel
             {
                 ArticleCode = await GenerateArticleCode(),
                 PrimaryBarcode = await GenerateArticleCode(),
@@ -98,7 +98,7 @@ namespace Store_Management_System.Controllers
         // POST: Articles/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Create(ArticleCreateViewModel model)
+        public async Task<IActionResult> Create(Store_Management_System.ViewModels.ArticleCreateViewModel model)
         {
             if (ModelState.IsValid)
             {
@@ -196,7 +196,7 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Edit(int id)
         {
             var article = await _context.Articles
-                .Include(a => a.Barcodes)
+                .Include(a => a.ArticleBarcodes)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (article == null)
@@ -204,8 +204,8 @@ namespace Store_Management_System.Controllers
                 return NotFound();
             }
 
-            var primaryBarcode = article.Barcodes?.FirstOrDefault(b => b.IsPrimary);
-            var additionalBarcodes = article.Barcodes?.Where(b => !b.IsPrimary).Select(b => b.Barcode).ToList();
+            var primaryBarcode = article.ArticleBarcodes?.FirstOrDefault(b => b.IsPrimary);
+            var additionalBarcodes = article.ArticleBarcodes?.Where(b => !b.IsPrimary).Select(b => b.Barcode).ToList();
 
             var model = new ArticleEditViewModel
             {
@@ -257,7 +257,7 @@ namespace Store_Management_System.Controllers
             if (ModelState.IsValid)
             {
                 var article = await _context.Articles
-                    .Include(a => a.Barcodes)
+                    .Include(a => a.ArticleBarcodes)
                     .FirstOrDefaultAsync(a => a.Id == id);
 
                 if (article == null)
@@ -296,14 +296,14 @@ namespace Store_Management_System.Controllers
 
                 // Update barcodes
                 // Update primary barcode
-                var primaryBarcode = article.Barcodes?.FirstOrDefault(b => b.IsPrimary);
+                var primaryBarcode = article.ArticleBarcodes?.FirstOrDefault(b => b.IsPrimary);
                 if (primaryBarcode != null)
                 {
                     primaryBarcode.Barcode = model.PrimaryBarcode;
                 }
 
                 // Remove old additional barcodes
-                var oldAdditionalBarcodes = article.Barcodes?.Where(b => !b.IsPrimary).ToList();
+                var oldAdditionalBarcodes = article.ArticleBarcodes?.Where(b => !b.IsPrimary).ToList();
                 if (oldAdditionalBarcodes != null)
                 {
                     _context.ArticleBarcodes.RemoveRange(oldAdditionalBarcodes);

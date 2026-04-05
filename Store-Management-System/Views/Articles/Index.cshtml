@@ -1,36 +1,30 @@
 ﻿@using Store_Management_System.ViewModels
-@model ProductIndexViewModel
+@model ArticleIndexViewModel
 
 @{
     ViewData["Title"] = "Articles";
 }
 
 <div class="mb-3 d-flex justify-content-between align-items-center">
-    <h1 class="h3 d-inline align-middle">Products</h1>
+    <h1 class="h3 d-inline align-middle">Articles</h1>
     <a asp-action="Create" class="btn btn-primary">
-        <i class="align-middle" data-feather="plus"></i> Add New Product
+        <i class="align-middle" data-feather="plus"></i> Add New Article
     </a>
 </div>
 
 <div class="card">
     <div class="card-body">
-        <!-- Search and Filter Bar -->
         <form method="get" asp-action="Index" class="mb-4">
             <div class="row g-3">
                 <div class="col-md-4">
                     <div class="input-group">
                         <span class="input-group-text"><i class="align-middle" data-feather="search"></i></span>
-                        <input type="text" name="searchTerm" class="form-control" placeholder="Search by SKU or Name..." value="@Model.SearchTerm" />
+                        <input type="text" name="searchTerm" class="form-control" placeholder="Search by Code or Name..." value="@Model.SearchTerm" />
                     </div>
                 </div>
                 <div class="col-md-3">
                     <select name="categoryId" class="form-select" asp-items="Model.Categories">
                         <option value="">-- All Categories --</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <select name="supplierId" class="form-select" asp-items="Model.Suppliers">
-                        <option value="">-- All Suppliers --</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -39,69 +33,43 @@
             </div>
         </form>
 
-        <!-- Products Table -->
         <div class="table-responsive">
             <table class="table table-hover my-0">
                 <thead>
                     <tr>
-                        <th>SKU</th>
-                        <th>Product Name</th>
+                        <th>Article Code</th>
+                        <th>Article Name</th>
                         <th>Category</th>
-                        <th>Supplier</th>
-                        <th>Stock</th>
-                        <th>Unit Price</th>
+                        <th>Price</th>
                         <th>Status</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (!Model.Products.Any())
+                    @if (!Model.Articles.Any())
                     {
                         <tr>
-                            <td colspan="8" class="text-center py-4">
+                            <td colspan="6" class="text-center py-4">
                                 <i class="align-middle" data-feather="box" style="width: 48px; height: 48px;"></i>
-                                <p class="mt-2 mb-0">No products found. Click "Add New Product" to get started.</p>
+                                <p class="mt-2 mb-0">No articles found. Click "Add New Article" to get started.</p>
                             </td>
                         </tr>
                     }
                     else
                     {
-                        @foreach (var product in Model.Products)
+                        @foreach (var article in Model.Articles)
                         {
                             <tr>
-                                <td><code>@product.Sku</code></td>
-                                <td>
-                                    <strong>@product.Name</strong>
-                                    @if (!string.IsNullOrEmpty(product.Description))
-                                    {
-                                        <br />
-                                        <small class="text-muted">@(product.Description.Length > 50 ? product.Description.Substring(0, 50) + "..." : product.Description)</small>
-                                    }
-                                </td>
-                                <td>@product.CategoryName</td>
-                                <td>@product.SupplierName</td>
-                                <td>
-                                    <span class="badge bg-@product.StockStatusClass">@product.CurrentStock</span>
-                                    @if (product.CurrentStock <= product.ReorderLevel && product.CurrentStock > 0)
-                                    {
-                                        <small class="text-muted d-block">Reorder at: @product.ReorderLevel</small>
-                                    }
-                                </td>
-                                <td>@product.UnitPrice.ToString("C")</td>
-                                <td>
-                                    <span class="badge bg-@product.StockStatusClass">@product.StockStatus</span>
-                                </td>
+                                <td><code>@article.ArticleCode</code></td>
+                                <td><strong>@article.ArticleName</strong><br /><small class="text-muted">@(article.Description?.Length > 50 ? article.Description.Substring(0, 50) + "..." : article.Description)</small></td>
+                                <td>@article.CategoryName</td>
+                                <td>@article.StandardPrice.ToString("C")</td>
+                                <td><span class="badge @(article.IsActive ? "bg-success" : "bg-danger")">@(article.IsActive ? "Active" : "Inactive")</span></td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a asp-action="Details" asp-route-id="@product.Id" class="btn btn-sm btn-info" title="View">
-                                            <i class="align-middle" data-feather="eye"></i>
-                                        </a>
-                                        <a asp-action="Edit" asp-route-id="@product.Id" class="btn btn-sm btn-primary" title="Edit">
-                                            <i class="align-middle" data-feather="edit-2"></i>
-                                        </a>
-                                        <a asp-action="Delete" asp-route-id="@product.Id" class="btn btn-sm btn-danger" title="Delete">
-                                            <i class="align-middle" data-feather="trash-2"></i>
-                                        </a>
+                                        <a asp-action="Details" asp-route-id="@article.Id" class="btn btn-sm btn-info" title="View"><i class="align-middle" data-feather="eye"></i></a>
+                                        <a asp-action="Edit" asp-route-id="@article.Id" class="btn btn-sm btn-primary" title="Edit"><i class="align-middle" data-feather="edit-2"></i></a>
+                                        <a asp-action="Delete" asp-route-id="@article.Id" class="btn btn-sm btn-danger" title="Delete"><i class="align-middle" data-feather="trash-2"></i></a>
                                     </div>
                                 </td>
                             </tr>
@@ -111,22 +79,21 @@
             </table>
         </div>
 
-        <!-- Pagination -->
         @if (Model.TotalPages > 1)
         {
             <nav class="mt-4">
                 <ul class="pagination justify-content-center">
                     <li class="page-item @(Model.CurrentPage == 1 ? "disabled" : "")">
-                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-searchTerm="@Model.SearchTerm" asp-route-categoryId="@Model.CategoryId" asp-route-supplierId="@Model.SupplierId">Previous</a>
+                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage - 1)" asp-route-searchTerm="@Model.SearchTerm" asp-route-categoryId="@Model.CategoryId">Previous</a>
                     </li>
                     @for (int i = 1; i <= Model.TotalPages; i++)
                     {
                         <li class="page-item @(Model.CurrentPage == i ? "active" : "")">
-                            <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-searchTerm="@Model.SearchTerm" asp-route-categoryId="@Model.CategoryId" asp-route-supplierId="@Model.SupplierId">@i</a>
+                            <a class="page-link" asp-action="Index" asp-route-page="@i" asp-route-searchTerm="@Model.SearchTerm" asp-route-categoryId="@Model.CategoryId">@i</a>
                         </li>
                     }
                     <li class="page-item @(Model.CurrentPage == Model.TotalPages ? "disabled" : "")">
-                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-searchTerm="@Model.SearchTerm" asp-route-categoryId="@Model.CategoryId" asp-route-supplierId="@Model.SupplierId">Next</a>
+                        <a class="page-link" asp-action="Index" asp-route-page="@(Model.CurrentPage + 1)" asp-route-searchTerm="@Model.SearchTerm" asp-route-categoryId="@Model.CategoryId">Next</a>
                     </li>
                 </ul>
             </nav>
@@ -136,7 +103,6 @@
 
 @section Scripts {
     <script>
-        // Initialize Feather Icons
         feather.replace();
     </script>
 }

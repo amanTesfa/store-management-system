@@ -42,7 +42,7 @@ namespace Store_Management_System.Controllers
             var totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
 
             var articles = await query
-                .OrderBy(a => a.ArticleName)
+                .OrderBy(a => a.Id)
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(a => new ArticleListViewModel
@@ -85,6 +85,7 @@ namespace Store_Management_System.Controllers
             {
                 ArticleCode = await GenerateArticleCode(),
                 PrimaryBarcode = await GenerateArticleCode(),
+                BaseUnitId = 1,
                 IsActive = true,
                 IsStockable = true,
                 IsPurchasable = true,
@@ -100,6 +101,24 @@ namespace Store_Management_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(Store_Management_System.ViewModels.ArticleCreateViewModel model)
         {
+            ModelState.Remove("Categories");
+            ModelState.Remove("BaseUnits");
+            ModelState.Remove("PurchaseUnits");
+            ModelState.Remove("SalesUnits");
+
+
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                              .Select(e => e.ErrorMessage);
+                foreach (var error in errors)
+                {
+                    Console.WriteLine($"Validation Error: {error}");
+                }
+                TempData["failureMessage"] = $"this errors '{errors}' has been found";
+                return RedirectToAction(nameof(Index));
+            }
+
             if (ModelState.IsValid)
             {
                 // Check if ArticleCode already exists
@@ -119,7 +138,7 @@ namespace Store_Management_System.Controllers
                     ArticleCode = model.ArticleCode,
                     ArticleName = model.ArticleName,
                     Description = model.Description,
-                    ArticleCategory = model.ArticleCategory,  // FIXED: Using ArticleCategory
+                    ArticleCategory = model.ArticleCategory,  
                     ArticleGroup = model.ArticleGroup,
                     BaseUnitId = model.BaseUnitId,
                     PurchaseUnitId = model.PurchaseUnitId,
@@ -249,11 +268,15 @@ namespace Store_Management_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, ArticleEditViewModel model)
         {
+            ModelState.Remove("Categories");
+            ModelState.Remove("BaseUnits");
+            ModelState.Remove("PurchaseUnits");
+            ModelState.Remove("SalesUnits");
             if (id != model.Id)
             {
                 return NotFound();
             }
-
+          
             if (ModelState.IsValid)
             {
                 var article = await _context.Articles
@@ -339,7 +362,35 @@ namespace Store_Management_System.Controllers
             await PopulateDropdowns(model.ArticleCategory, model.BaseUnitId);
             return View(model);
         }
+        // GET: Articles/Details/5
+        public async Task<IActionResult> Details(int id)
+        {
+            var article = await _context.Articles
+                .Include(a => a.Category)
+                .Include(a => a.ArticleBarcodes)
+                .FirstOrDefaultAsync(a => a.Id == id);
 
+            if (article == null)
+            {
+                return NotFound();
+            }
+
+            // Get recent stock movements (if you have StockMovements table)
+            var recentMovements = await _context.StockMovements
+                .Where(s => s.ArticleId == id)
+                .OrderByDescending(s => s.MovementDate)
+                .Take(10)
+                .ToListAsync();
+
+            var primaryBarcode = article.ArticleBarcodes?.FirstOrDefault(b => b.IsPrimary);
+            var additionalBarcodes = article.ArticleBarcodes?.Where(b => !b.IsPrimary).ToList();
+
+            ViewBag.RecentMovements = recentMovements;
+            ViewBag.PrimaryBarcode = primaryBarcode;
+            ViewBag.AdditionalBarcodes = additionalBarcodes;
+
+            return View(article);
+        }
         // GET: Articles/Delete/5
         public async Task<IActionResult> Delete(int id)
         {
@@ -356,23 +407,30 @@ namespace Store_Management_System.Controllers
         }
 
         // POST: Articles/Delete/5
-        [HttpPost, ActionName("Delete")]
+        [HttpPost, ActionName("DeleteConfirmed")]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> DeleteConfirmed(int id)
         {
-            var article = await _context.Articles.FindAsync(id);
-            if (article != null)
+            try
             {
-                article.IsActive = false;
-                article.UpdatedAt = DateTime.UtcNow;
-                _context.Update(article);
-                await _context.SaveChangesAsync();
-                TempData["SuccessMessage"] = $"Article '{article.ArticleName}' has been deleted successfully!";
+                var article = await _context.Articles.FindAsync(id);
+                if (article != null)
+                {
+                    article.IsActive = false;
+                    article.UpdatedAt = DateTime.UtcNow;
+                    _context.Update(article);
+                    await _context.SaveChangesAsync();
+
+                    return Json(new { success = true, message = $"Article '{article.ArticleName}' has been deleted successfully!" });
+                }
+
+                return Json(new { success = false, message = "Article not found." });
             }
-
-            return RedirectToAction(nameof(Index));
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message });
+            }
         }
-
         // GET: Articles/GetBarcodes/5
         [HttpGet]
         public async Task<IActionResult> GetBarcodes(int id)

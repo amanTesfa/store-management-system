@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc.Rendering;
+﻿using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
 
 namespace Store_Management_System.ViewModels
@@ -119,9 +120,13 @@ namespace Store_Management_System.ViewModels
         public List<string> AdditionalBarcodes { get; set; } = new List<string>();
 
         // Dropdown data
+        [BindNever]
         public SelectList Categories { get; set; }
+        [BindNever]
         public SelectList BaseUnits { get; set; }
+        [BindNever]
         public SelectList PurchaseUnits { get; set; }
+        [BindNever]
         public SelectList SalesUnits { get; set; }
     }
 

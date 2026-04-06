@@ -1,14 +1,13 @@
-﻿@using Store_Management_System.ViewModels
-@model ProductDetailsViewModel
+﻿@model Store_Management_System.Models.Article
 
 @{
-    ViewData["Title"] = "Product Details";
+    ViewData["Title"] = "Article Details";
 }
 
 <div class="mb-3 d-flex justify-content-between align-items-center">
     <div>
-        <h1 class="h3 d-inline align-middle">@Model.Name</h1>
-        <span class="badge bg-secondary ms-2">@Model.Sku</span>
+        <h1 class="h3 d-inline align-middle">@Model.ArticleName</h1>
+        <span class="badge bg-secondary ms-2">@Model.ArticleCode</span>
     </div>
     <div class="btn-group" role="group">
         <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
@@ -21,199 +20,136 @@
 </div>
 
 <div class="row">
-    <div class="col-12 col-lg-4">
-        <!-- Stock Status Card -->
+    <div class="col-12 col-lg-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Stock Status</h5>
-            </div>
-            <div class="card-body text-center">
-                <div class="display-1 fw-bold text-@Model.StockStatusClass">@Model.CurrentStock</div>
-                <span class="badge bg-@Model.StockStatusClass fs-6 mt-2">@Model.StockStatus</span>
-
-                @if (Model.CurrentStock <= Model.ReorderLevel && Model.CurrentStock > 0)
-                {
-                    <div class="alert alert-warning mt-3 mb-0">
-                        <i class="align-middle" data-feather="alert-triangle"></i>
-                        Reorder level: @Model.ReorderLevel
-                    </div>
-                }
-                else if (Model.CurrentStock == 0)
-                {
-                    <div class="alert alert-danger mt-3 mb-0">
-                        <i class="align-middle" data-feather="alert-circle"></i>
-                        Product is out of stock
-                    </div>
-                }
-            </div>
-        </div>
-
-        <!-- Stock Adjustment Card -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Adjust Stock</h5>
+                <h5 class="card-title mb-0">Article Information</h5>
             </div>
             <div class="card-body">
-                <form asp-action="AdjustStock" asp-route-id="@Model.Id" method="post">
-                    <div class="mb-3">
-                        <label class="form-label">Adjustment Quantity</label>
-                        <div class="input-group">
-                            <button type="button" class="btn btn-outline-secondary" onclick="adjustQuantity(-1)">-</button>
-                            <input type="number" name="adjustmentQuantity" id="adjustmentQuantity" class="form-control text-center" value="0" step="1" />
-                            <button type="button" class="btn btn-outline-secondary" onclick="adjustQuantity(1)">+</button>
-                        </div>
-                        <small class="text-muted">Positive = Add stock, Negative = Remove stock</small>
-                    </div>
-                    <div class="mb-3">
-                        <label class="form-label">Reason</label>
-                        <textarea name="reason" class="form-control" rows="2" placeholder="e.g., Stock count correction, damaged goods, return..."></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-warning w-100">
-                        <i class="align-middle" data-feather="refresh-cw"></i> Apply Adjustment
-                    </button>
-                </form>
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 40%">Article Code</th>
+                        <td><code>@Model.ArticleCode</code></td>
+                    </tr>
+                    <tr>
+                        <th>Article Name</th>
+                        <td>@Model.ArticleName</td>
+                    </tr>
+                    <tr>
+                        <th>Description</th>
+                        <td>@(Model.Description ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Category</th>
+                        <td>@(Model.Category?.Name ?? "Not assigned")</td>
+                    </tr>
+                    <tr>
+                        <th>Article Group</th>
+                        <td>@(Model.ArticleGroup ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td>
+                            <span class="badge @(Model.IsActive ? "bg-success" : "bg-danger")">
+                                @(Model.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </td>
+                    </tr>
+                </table>
             </div>
         </div>
     </div>
 
-    <div class="col-12 col-lg-8">
-        <!-- Product Details Card -->
+    <div class="col-12 col-lg-6">
         <div class="card">
             <div class="card-header">
-                <h5 class="card-title mb-0">Product Information</h5>
+                <h5 class="card-title mb-0">Pricing & Units</h5>
             </div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="text-muted small text-uppercase">SKU</label>
-                            <div><code>@Model.Sku</code></div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="text-muted small text-uppercase">Category</label>
-                            <div>@(Model.CategoryName ?? "Not assigned")</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="text-muted small text-uppercase">Supplier</label>
-                            <div>@(Model.SupplierName ?? "Not assigned")</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="text-muted small text-uppercase">Cost Price</label>
-                            <div>@Model.CostPrice.ToString("C")</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="text-muted small text-uppercase">Selling Price</label>
-                            <div>@Model.UnitPrice.ToString("C")</div>
-                        </div>
-                        <div class="mb-3">
-                            <label class="text-muted small text-uppercase">Margin</label>
-                            <div class="@(Model.UnitPrice - Model.CostPrice > 0 ? "text-success" : "text-danger")">
-                                @((Model.UnitPrice - Model.CostPrice).ToString("C"))
-                                (@(((Model.UnitPrice - Model.CostPrice) / Model.CostPrice * 100).ToString("F1"))%)
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                @if (!string.IsNullOrEmpty(Model.Description))
-                {
-                    <div class="mb-3">
-                        <label class="text-muted small text-uppercase">Description</label>
-                        <div>@Model.Description</div>
-                    </div>
-                }
-
-                <hr />
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="text-muted small text-uppercase">Created At</label>
-                            <div>@Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="text-muted small text-uppercase">Last Updated</label>
-                            <div>@(Model.UpdatedAt?.ToString("MMM dd, yyyy HH:mm") ?? "Never")</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-3">
-                    <h6>Tracking Options</h6>
-                    <div class="d-flex gap-3">
-                        <span class="badge @(Model.IsSerialized ? "bg-success" : "bg-secondary")">
-                            @(Model.IsSerialized ? "✓" : "✗") Serial Number
-                        </span>
-                        <span class="badge @(Model.IsBatchTracked ? "bg-success" : "bg-secondary")">
-                            @(Model.IsBatchTracked ? "✓" : "✗") Batch/Lot
-                        </span>
-                        <span class="badge @(Model.IsExpiryTracked ? "bg-success" : "bg-secondary")">
-                            @(Model.IsExpiryTracked ? "✓" : "✗") Expiry Date
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Recent Movements Card -->
-        <div class="card mt-3">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Recent Stock Movements</h5>
-            </div>
-            <div class="table-responsive">
-                <table class="table table-hover my-0">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>Type</th>
-                            <th>Quantity</th>
-                            <th>Reference</th>
-                            <th>Performed By</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @if (!Model.RecentMovements.Any())
-                        {
-                            <tr>
-                                <td colspan="5" class="text-center py-3">No stock movements recorded</td>
-                            </tr>
-                        }
-                        else
-                        {
-                            @foreach (var movement in Model.RecentMovements)
-                            {
-                                <tr>
-                                    <td>@movement.MovementDate.ToString("MMM dd, yyyy")</td>
-                                    <td>
-                                        <span class="badge @(movement.Quantity > 0 ? "bg-success" : "bg-danger")">
-                                            @movement.MovementType
-                                        </span>
-                                    </td>
-                                    <td>@(movement.Quantity > 0 ? $"+{movement.Quantity}" : movement.Quantity.ToString())</td>
-                                    <td>@movement.Reference</td>
-                                    <td>@movement.PerformedBy</td>
-                                </tr>
-                            }
-                        }
-                    </tbody>
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 40%">Standard Cost</th>
+                        <td>@Model.StandardCost.ToString("C")</td>
+                    </tr>
+                    <tr>
+                        <th>Standard Price</th>
+                        <td>@Model.StandardPrice.ToString("C")</td>
+                    </tr>
+                    <tr>
+                        <th>Base Unit</th>
+                        <td>@(Model.BaseUnit?.UnitName ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Purchase Unit</th>
+                        <td>@(Model.PurchaseUnit?.UnitName ?? "Same as Base")</td>
+                    </tr>
+                    <tr>
+                        <th>Sales Unit</th>
+                        <td>@(Model.SalesUnit?.UnitName ?? "Same as Base")</td>
+                    </tr>
+                    <tr>
+                        <th>Tax Rate</th>
+                        <td>@Model.TaxRate%</td>
+                    </tr>
                 </table>
             </div>
         </div>
     </div>
 </div>
 
-@section Scripts {
-    <script>
-        feather.replace();
+<div class="row mt-3">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Barcodes</h5>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.PrimaryBarcode != null)
+                {
+                    <div class="mb-3">
+                        <strong>Primary Barcode:</strong>
+                        <div class="mt-2">
+                            <svg id="barcode-svg"></svg>
+                        </div>
+                        <code>@ViewBag.PrimaryBarcode.Barcode</code>
+                    </div>
+                }
 
-        function adjustQuantity(change) {
-            var input = document.getElementById('adjustmentQuantity');
-            var currentValue = parseInt(input.value) || 0;
-            input.value = currentValue + change;
+                @if (ViewBag.AdditionalBarcodes != null && ((IEnumerable<dynamic>)ViewBag.AdditionalBarcodes).Any())
+                {
+                    <strong>Additional Barcodes:</strong>
+                    <ul class="mt-2">
+                        @foreach (var barcode in ViewBag.AdditionalBarcodes)
+                        {
+                            <li><code>@barcode.Barcode</code> (@barcode.BarcodeType)</li>
+                        }
+                    </ul>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">No additional barcodes</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.5/dist/JsBarcode.all.min.js"></script>
+    <script>
+        // Generate barcode for primary barcode
+        @if (ViewBag.PrimaryBarcode != null)
+        {
+                <text>
+                JsBarcode("#barcode-svg", "@ViewBag.PrimaryBarcode.Barcode", {
+                    format: "CODE128",
+                    width: 2,
+                    height: 50,
+                    displayValue: true,
+                    fontSize: 14,
+                    margin: 10
+                });
+                </text>
         }
     </script>
 }

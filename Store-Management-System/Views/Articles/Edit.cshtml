@@ -1,38 +1,42 @@
-﻿@using Store_Management_System.ViewModels
-@model ProductEditViewModel
+﻿@model ArticleEditViewModel
 
 @{
-    ViewData["Title"] = "Edit Product";
+    ViewData["Title"] = "Edit Article";
 }
 
 <div class="mb-3">
-    <h1 class="h3 d-inline align-middle">Edit Product</h1>
-    <span class="badge bg-dark text-white ms-2">@Model.Sku</span>
+    <h1 class="h3 d-inline align-middle">Edit Article</h1>
+    <span class="badge bg-dark text-white ms-2">@Model.ArticleCode</span>
 </div>
 
 <form asp-action="Edit" method="post">
     <input type="hidden" asp-for="Id" />
-    <input type="hidden" asp-for="CreatedAt" />
 
     <div class="row">
         <div class="col-12 col-lg-6">
             <div class="card">
                 <div class="card-header">
-                    <h5 class="card-title mb-0">Product Information</h5>
+                    <h5 class="card-title mb-0">Article Information</h5>
                 </div>
                 <div class="card-body">
                     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
 
                     <div class="mb-3">
-                        <label asp-for="Sku" class="form-label">SKU *</label>
-                        <input asp-for="Sku" class="form-control" />
-                        <span asp-validation-for="Sku" class="text-danger small"></span>
+                        <label asp-for="ArticleCode" class="form-label">Article Code</label>
+                        <input asp-for="ArticleCode" class="form-control" readonly style="background-color: #e9ecef;" />
+                        <small class="text-muted">Article code cannot be changed</small>
                     </div>
 
                     <div class="mb-3">
-                        <label asp-for="Name" class="form-label">Product Name *</label>
-                        <input asp-for="Name" class="form-control" />
-                        <span asp-validation-for="Name" class="text-danger small"></span>
+                        <label asp-for="PrimaryBarcode" class="form-label">Primary Barcode</label>
+                        <input asp-for="PrimaryBarcode" class="form-control" id="PrimaryBarcode" />
+                        <small class="text-muted">For scanning at POS</small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ArticleName" class="form-label">Article Name *</label>
+                        <input asp-for="ArticleName" class="form-control" />
+                        <span asp-validation-for="ArticleName" class="text-danger small"></span>
                     </div>
 
                     <div class="mb-3">
@@ -44,28 +48,54 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="CategoryId" class="form-label">Category *</label>
-                                <select asp-for="CategoryId" class="form-select" asp-items="ViewBag.Categories">
+                                <label asp-for="ArticleCategory" class="form-label">Category</label>
+                                <select asp-for="ArticleCategory" class="form-select" asp-items="ViewBag.Categories">
                                     <option value="">-- Select Category --</option>
                                 </select>
-                                <span asp-validation-for="CategoryId" class="text-danger small"></span>
+                                <span asp-validation-for="ArticleCategory" class="text-danger small"></span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="SupplierId" class="form-label">Supplier</label>
-                                <select asp-for="SupplierId" class="form-select" asp-items="ViewBag.Suppliers">
-                                    <option value="">-- Select Supplier --</option>
-                                </select>
-                                <span asp-validation-for="SupplierId" class="text-danger small"></span>
+                                <label asp-for="ArticleGroup" class="form-label">Article Group</label>
+                                <input asp-for="ArticleGroup" class="form-control" />
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="mb-3">
-                        <div class="form-check form-switch">
-                            <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch">
-                            <label asp-for="IsActive" class="form-check-label">Active Product</label>
+            <!-- Units Card -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Units of Measure</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="BaseUnitId" class="form-label">Base Unit *</label>
+                                <select asp-for="BaseUnitId" class="form-select" asp-items="ViewBag.BaseUnits">
+                                    <option value="">-- Select Unit --</option>
+                                </select>
+                                <span asp-validation-for="BaseUnitId" class="text-danger small"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="PurchaseUnitId" class="form-label">Purchase Unit</label>
+                                <select asp-for="PurchaseUnitId" class="form-select" asp-items="ViewBag.PurchaseUnits">
+                                    <option value="">-- Same as Base --</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="SalesUnitId" class="form-label">Sales Unit</label>
+                                <select asp-for="SalesUnitId" class="form-select" asp-items="ViewBag.SalesUnits">
+                                    <option value="">-- Same as Base --</option>
+                                </select>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -81,22 +111,43 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="CostPrice" class="form-label">Cost Price *</label>
+                                <label asp-for="StandardCost" class="form-label">Standard Cost *</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input asp-for="CostPrice" class="form-control" type="number" step="0.01" />
+                                    <input asp-for="StandardCost" class="form-control" type="number" step="0.01" />
                                 </div>
-                                <span asp-validation-for="CostPrice" class="text-danger small"></span>
+                                <span asp-validation-for="StandardCost" class="text-danger small"></span>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="UnitPrice" class="form-label">Selling Price *</label>
+                                <label asp-for="StandardPrice" class="form-label">Standard Price *</label>
                                 <div class="input-group">
                                     <span class="input-group-text">$</span>
-                                    <input asp-for="UnitPrice" class="form-control" type="number" step="0.01" />
+                                    <input asp-for="StandardPrice" class="form-control" type="number" step="0.01" />
                                 </div>
-                                <span asp-validation-for="UnitPrice" class="text-danger small"></span>
+                                <span asp-validation-for="StandardPrice" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="ReorderLevel" class="form-label">Reorder Level</label>
+                                <input asp-for="ReorderLevel" class="form-control" type="number" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="SafetyStock" class="form-label">Safety Stock</label>
+                                <input asp-for="SafetyStock" class="form-control" type="number" />
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label asp-for="MaxStockLevel" class="form-label">Max Stock Level</label>
+                                <input asp-for="MaxStockLevel" class="form-control" type="number" />
                             </div>
                         </div>
                     </div>
@@ -104,28 +155,83 @@
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Current Stock</label>
-                                <input class="form-control" type="text" value="@Model.CurrentStock" readonly disabled />
-                                <small class="text-muted">Use Stock Adjustment to change stock level</small>
+                                <label asp-for="TaxRate" class="form-label">Tax Rate (%)</label>
+                                <input asp-for="TaxRate" class="form-control" type="number" step="0.01" />
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label asp-for="ReorderLevel" class="form-label">Reorder Level *</label>
-                                <input asp-for="ReorderLevel" class="form-control" type="number" />
-                                <span asp-validation-for="ReorderLevel" class="text-danger small"></span>
+                                <label asp-for="TaxGroup" class="form-label">Tax Group</label>
+                                <input asp-for="TaxGroup" class="form-control" />
                             </div>
                         </div>
                     </div>
+                </div>
+            </div>
 
-                    <div class="mb-3">
-                        <label asp-for="MaxStockLevel" class="form-label">Maximum Stock Level</label>
-                        <input asp-for="MaxStockLevel" class="form-control" type="number" placeholder="Optional" />
+            <!-- Additional Barcodes Card -->
+            <div class="card mt-3">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Additional Barcodes</h5>
+                    <button type="button" class="btn btn-sm btn-outline-primary" onclick="addBarcodeField()">
+                        <i class="align-middle" data-feather="plus"></i> Add
+                    </button>
+                </div>
+                <div class="card-body">
+                    <div id="barcodes-list">
+                        @for (int i = 0; i < Model.AdditionalBarcodes.Count; i++)
+                        {
+                            <div class="input-group mb-2 barcode-field">
+                                <input asp-for="AdditionalBarcodes[i]" class="form-control" placeholder="Enter additional barcode" />
+                                <button type="button" class="btn btn-outline-danger" onclick="removeBarcodeField(this)">
+                                    <i class="align-middle" data-feather="x"></i>
+                                </button>
+                            </div>
+                        }
                     </div>
+                    <small class="text-muted">Add alternative barcodes (UPC, EAN, etc.) for this article</small>
+                </div>
+            </div>
 
-                    <div class="alert alert-info">
-                        <i class="align-middle" data-feather="info"></i>
-                        <strong>Note:</strong> To adjust current stock, go to the Product Details page.
+            <!-- Status Flags Card -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Status & Tracking</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-2">
+                                <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch">
+                                <label asp-for="IsActive" class="form-check-label">Active Article</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input asp-for="IsStockable" class="form-check-input" type="checkbox" role="switch">
+                                <label asp-for="IsStockable" class="form-check-label">Stockable</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input asp-for="IsPurchasable" class="form-check-input" type="checkbox" role="switch">
+                                <label asp-for="IsPurchasable" class="form-check-label">Purchasable</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input asp-for="IsSellable" class="form-check-input" type="checkbox" role="switch">
+                                <label asp-for="IsSellable" class="form-check-label">Sellable</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch mb-2">
+                                <input asp-for="IsSerialized" class="form-check-input" type="checkbox" role="switch">
+                                <label asp-for="IsSerialized" class="form-check-label">Track by Serial Number</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input asp-for="IsBatchTracked" class="form-check-input" type="checkbox" role="switch">
+                                <label asp-for="IsBatchTracked" class="form-check-label">Track by Batch/Lot</label>
+                            </div>
+                            <div class="form-check form-switch mb-2">
+                                <input asp-for="IsExpiryTracked" class="form-check-input" type="checkbox" role="switch">
+                                <label asp-for="IsExpiryTracked" class="form-check-label">Track Expiry Date</label>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -135,10 +241,7 @@
                     <h5 class="card-title mb-0">System Information</h5>
                 </div>
                 <div class="card-body">
-                    <div class="mb-2">
-                        <small class="text-muted">Created At:</small>
-                        <div>@Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</div>
-                    </div>
+                   
                 </div>
             </div>
         </div>
@@ -160,5 +263,24 @@
     }
     <script>
         feather.replace();
+
+        // Add additional barcode field
+        function addBarcodeField() {
+            var html = `
+                <div class="input-group mb-2 barcode-field">
+                    <input name="AdditionalBarcodes" class="form-control" placeholder="Enter additional barcode" />
+                    <button type="button" class="btn btn-outline-danger" onclick="removeBarcodeField(this)">
+                        <i class="align-middle" data-feather="x"></i>
+                    </button>
+                </div>
+            `;
+            $('#barcodes-list').append(html);
+            feather.replace();
+        }
+
+        // Remove barcode field
+        function removeBarcodeField(btn) {
+            $(btn).closest('.barcode-field').remove();
+        }
     </script>
 }

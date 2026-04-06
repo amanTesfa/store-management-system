@@ -1,0 +1,76 @@
+﻿@model CategoryEditViewModel
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Edit Category</h5>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="loadCategoryDetails(@Model.Id)">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to Details
+        </button>
+    </div>
+    <div class="card-body">
+        <form id="editCategoryForm" onsubmit="event.preventDefault(); submitEditForm();">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Id" />
+            <input type="hidden" asp-for="CreatedAt" />
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Category Name *</label>
+                <input asp-for="Name" class="form-control" required />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Description" class="form-label">Description</label>
+                <textarea asp-for="Description" class="form-control" rows="3"></textarea>
+                <span asp-validation-for="Description" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ParentId" class="form-label">Parent Category</label>
+                <select asp-for="ParentId" class="form-select" asp-items="ViewBag.ParentCategories">
+                    <option value="">-- No Parent (Root Category) --</option>
+                </select>
+                <span asp-validation-for="ParentId" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="DisplayOrder" class="form-label">Display Order</label>
+                <input asp-for="DisplayOrder" class="form-control" type="number" />
+                <small class="text-muted">Lower numbers appear first</small>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch">
+                    <label asp-for="IsActive" class="form-check-label">Active Category</label>
+                </div>
+            </div>
+
+            <div class="alert alert-info">
+                <i class="align-middle" data-feather="info"></i>
+                <strong>System Information</strong>
+                <hr class="my-2" />
+                <small>Created: @Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</small><br />
+                @if (Model.UpdatedAt.HasValue)
+                {
+                    <small>Last Updated: @Model.UpdatedAt.Value.ToString("MMM dd, yyyy HH:mm")</small>
+                }
+            </div>
+
+            <div class="mt-3 d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="loadCategoryDetails(@Model.Id)">
+                    <i class="align-middle" data-feather="x"></i> Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="align-middle" data-feather="save"></i> Save Changes
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

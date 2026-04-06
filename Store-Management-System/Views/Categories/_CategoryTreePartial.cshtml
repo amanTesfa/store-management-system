@@ -1,0 +1,63 @@
+﻿@model List<CategoryTreeNodeViewModel>
+
+@functions {
+    string GetLevelClass(int level)
+    {
+        return level == 0 ? "root-level" : $"level-{level}";
+    }
+}
+
+@foreach (var category in Model)
+{
+    <div class="category-wrapper mb-2">
+        <div class="category-item d-flex align-items-center justify-content-between p-2 border rounded @(category.IsActive ? "bg-light" : "bg-secondary bg-opacity-25")"
+             data-id="@category.Id"
+             style="margin-left: @(category.Level * 20)px;
+                        cursor: pointer;
+                        transition: all 0.2s ease;">
+
+            <div class="d-flex align-items-center flex-grow-1" onclick="loadCategoryDetails(@category.Id)">
+                <i class="drag-handle align-middle me-2 text-muted" data-feather="grip-vertical" style="cursor: grab;"></i>
+                <i class="align-middle me-2 @(category.HasChildren ? "text-warning" : "text-secondary")" data-feather="@(category.HasChildren ? "folder" : "folder")"></i>
+
+                <div>
+                    <strong class="@(!category.IsActive ? "text-decoration-line-through" : "")">@category.Name</strong>
+                    @if (!string.IsNullOrEmpty(category.Description))
+                    {
+                        <br />
+                        <small class="text-muted">@(category.Description.Length > 40 ? category.Description.Substring(0, 40) + "..." : category.Description)</small>
+                    }
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge @(category.IsActive ? "bg-success" : "bg-secondary")">
+                    @(category.IsActive ? "Active" : "Inactive")
+                </span>
+                @if (category.ChildCount > 0)
+                {
+                    <span class="badge bg-info">
+                        <i class="align-middle" data-feather="folder"></i> @category.ChildCount
+                    </span>
+                }
+                @if (category.ArticleCount > 0)
+                {
+                    <span class="badge bg-primary">
+                        <i class="align-middle" data-feather="package"></i> @category.ArticleCount
+                    </span>
+                }
+            </div>
+        </div>
+
+        @if (category.Children.Any())
+        {
+            <div class="category-list mt-2" data-parent-id="@category.Id">
+                @await Html.PartialAsync("_CategoryTreePartial", category.Children)
+            </div>
+        }
+        else if (category.HasChildren)
+        {
+            <div class="category-list mt-2" data-parent-id="@category.Id"></div>
+        }
+    </div>
+}

@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc.Rendering;
 using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Store_Management_System.ViewModels
 {
@@ -46,7 +47,7 @@ namespace Store_Management_System.ViewModels
 
         [Display(Name = "Is Active")]
         public bool IsActive { get; set; } = true;
-
+        [NotMapped]
         public SelectList ParentCategories { get; set; }
     }
 

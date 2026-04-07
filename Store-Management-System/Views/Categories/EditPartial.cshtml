@@ -8,7 +8,7 @@
         </button>
     </div>
     <div class="card-body">
-        <form id="editCategoryForm" onsubmit="event.preventDefault(); submitEditForm();">
+        <form id="editCategoryForm" method="post">
             @Html.AntiForgeryToken()
             <input type="hidden" asp-for="Id" />
             <input type="hidden" asp-for="CreatedAt" />
@@ -63,7 +63,7 @@
                 <button type="button" class="btn btn-secondary" onclick="loadCategoryDetails(@Model.Id)">
                     <i class="align-middle" data-feather="x"></i> Cancel
                 </button>
-                <button type="submit" class="btn btn-primary">
+                <button type="submit" class="btn btn-primary" onclick="event.preventDefault(); submitEditForm();">
                     <i class="align-middle" data-feather="save"></i> Save Changes
                 </button>
             </div>
@@ -71,6 +71,6 @@
     </div>
 </div>
 
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
+<script>
+    feather.replace();
+</script>

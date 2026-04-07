@@ -1,0 +1,148 @@
+﻿@model SupplierDetailsViewModel
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Supplier Details</h5>
+        <div>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadEditForm(@Model.Id)">
+                <i class="align-middle" data-feather="edit-2"></i> Edit
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteSupplier(@Model.Id, '@Model.Name.Replace("'", "\\'")')">
+                <i class="align-middle" data-feather="trash-2"></i> Delete
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Supplier Information -->
+        <div class="row">
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 35%">Supplier Name</th>
+                        <td>@Model.Name</td>
+                    </tr>
+                    <tr>
+                        <th>Contact Person</th>
+                        <td>@(Model.ContactPerson ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Email</th>
+                        <td>@(Model.Email ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Phone</th>
+                        <td>@(Model.Phone ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Address</th>
+                        <td>@(Model.Address ?? "N/A")</td>
+                    </tr>
+                </table>
+            </div>
+            <div class="col-md-6">
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 35%">Payment Terms</th>
+                        <td>@(Model.PaymentTerms ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Credit Limit</th>
+                        <td>@(Model.CreditLimit?.ToString("C") ?? "No limit")</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td>
+                            <span class="badge @(Model.IsActive ? "bg-success" : "bg-danger")">
+                                @(Model.IsActive ? "Active" : "Inactive")
+                            </span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Rating</th>
+                        <td>
+                            @for (int i = 1; i <= 5; i++)
+                            {
+                                if (i <= Model.Rating)
+                                {
+                                    <i class="align-middle text-warning" data-feather="star"></i>
+                                }
+                                else
+                                {
+                                    <i class="align-middle text-secondary" data-feather="star"></i>
+                                }
+                            }
+                            <span class="ms-2">(@Model.Rating/5)</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Created At</th>
+                        <td>@Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+                    </tr>
+                    @if (Model.UpdatedAt.HasValue)
+                    {
+                        <tr>
+                            <th>Last Updated</th>
+                            <td>@Model.UpdatedAt.Value.ToString("MMM dd, yyyy HH:mm")</td>
+                        </tr>
+                    }
+                </table>
+            </div>
+        </div>
+
+        <!-- Articles from this supplier -->
+        <div class="mt-4">
+            <h6 class="mb-3">
+                <i class="align-middle" data-feather="package"></i> Products from this Supplier
+                <span class="badge bg-primary ms-2">@Model.Articles.Count</span>
+            </h6>
+
+            @if (Model.Articles.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th>Article Code</th>
+                                <th>Article Name</th>
+                                <th>Price</th>
+                                <th>Status</th>
+                                <th>Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var article in Model.Articles)
+                            {
+                                <tr>
+                                    <td><code>@article.ArticleCode</code></td>
+                                    <td>@article.ArticleName</td>
+                                    <td>@article.StandardPrice.ToString("C")</td>
+                                    <td>
+                                        <span class="badge @(article.IsActive ? "bg-success" : "bg-danger")">
+                                            @(article.IsActive ? "Active" : "Inactive")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a asp-controller="Articles" asp-action="Details" asp-route-id="@article.Id" class="btn btn-sm btn-info">
+                                            <i class="align-middle" data-feather="eye"></i> View
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="align-middle" data-feather="info"></i>
+                    No products found from this supplier.
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    feather.replace();
+</script>

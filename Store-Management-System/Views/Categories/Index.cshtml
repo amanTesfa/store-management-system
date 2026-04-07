@@ -2,96 +2,68 @@
 
 @{
     ViewData["Title"] = "Categories";
-    Layout = null;  // No layout for partial updates, but we'll keep the main layout
 }
 
-<!DOCTYPE html>
-<html>
-<head>
-    <partial name="_AdminKitHead" />
-</head>
-<body>
-    <div class="wrapper">
-        <partial name="_Sidebar" />
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Categories</h1>
+        <span class="badge bg-dark text-white ms-2">Hierarchical</span>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="loadCreateForm()">
+        <i class="align-middle" data-feather="plus"></i> Add Category
+    </button>
+</div>
 
-        <div class="main">
-            <partial name="_TopNavbar" />
-
-            <main class="content">
-                <div class="container-fluid p-0">
-                    <!-- Page Header -->
-                    <div class="mb-3 d-flex justify-content-between align-items-center">
-                        <div>
-                            <h1 class="h3 d-inline align-middle">Categories</h1>
-                            <span class="badge bg-dark text-white ms-2">Hierarchical</span>
-                        </div>
-                        <button type="button" class="btn btn-primary" onclick="loadCreateForm()">
-                            <i class="align-middle" data-feather="plus"></i> Add Category
-                        </button>
-                    </div>
-
-                    <!-- Split Screen Layout -->
-                    <div class="row g-4">
-                        <!-- Left Side: Category Tree -->
-                        <div class="col-lg-5 col-xl-4">
-                            <div class="card">
-                                <div class="card-header">
-                                    <div class="input-group">
-                                        <input type="text" id="searchInput" class="form-control" placeholder="Search categories..." value="@Model.SearchTerm" />
-                                        <button class="btn btn-outline-primary" id="searchBtn">
-                                            <i class="align-middle" data-feather="search"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="card-body p-0">
-                                    <div id="category-tree-container" class="category-tree-container p-3">
-                                        @if (!Model.Categories.Any())
-                                        {
-                                            <div class="text-center py-5">
-                                                <i class="align-middle" data-feather="folder" style="width: 48px; height: 48px;"></i>
-                                                <p class="mt-2 mb-0">No categories found.</p>
-                                            </div>
-                                        }
-                                        else
-                                        {
-                                            @await Html.PartialAsync("_CategoryTreePartial", Model.Categories)
-                                        }
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Right Side: Form Panel -->
-                        <div class="col-lg-7 col-xl-8">
-                            <div id="formPanel">
-                                <div class="card">
-                                    <div class="card-body text-center py-5">
-                                        <i class="align-middle" data-feather="mouse-pointer" style="width: 48px; height: 48px; color: #6c757d;"></i>
-                                        <h5 class="mt-3">Select a category</h5>
-                                        <p class="text-muted">Click on any category to view or edit its details</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+<!-- Split Screen Layout -->
+<div class="row g-4">
+    <!-- Left Side: Category Tree (Scrollable) -->
+    <div class="col-lg-5 col-xl-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search categories..." value="@Model.SearchTerm" />
+                    <button class="btn btn-outline-primary" id="searchBtn">
+                        <i class="align-middle" data-feather="search"></i>
+                    </button>
                 </div>
-            </main>
-
-            <partial name="_Footer" />
+            </div>
+            <div class="card-body p-0">
+                <div id="category-tree-container" class="category-tree-container p-3" style="max-height: 70vh; overflow-y: auto;">
+                    @if (!Model.Categories.Any())
+                    {
+                        <div class="text-center py-5">
+                            <i class="align-middle" data-feather="folder" style="width: 48px; height: 48px;"></i>
+                            <p class="mt-2 mb-0">No categories found.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_CategoryTreePartial", Model.Categories)
+                    }
+                </div>
+            </div>
         </div>
     </div>
 
-    <!-- Hidden form for anti-forgery -->
-    <form id="antiForgeryForm" style="display:none">
-        @Html.AntiForgeryToken()
-    </form>
+    <!-- Right Side: Form Panel -->
+    <div class="col-lg-7 col-xl-8">
+        <div id="formPanel">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="align-middle" data-feather="mouse-pointer" style="width: 48px; height: 48px; color: #6c757d;"></i>
+                    <h5 class="mt-3">Select a category</h5>
+                    <p class="text-muted">Click on any category to view or edit its details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Hidden anti-forgery token -->
+@Html.AntiForgeryToken()
+
+@section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
-    <script src="~/js/app.js"></script>
-    <script src="~/js/site.js"></script>
-
     <script>
         // Load category details into right panel
         function loadCategoryDetails(id) {
@@ -140,14 +112,18 @@
             });
         }
 
-        // Submit create form
+            // Submit create form
         function submitCreateForm() {
             var formData = $('#createCategoryForm').serialize();
+            var token = $('input[name="__RequestVerificationToken"]').val();
 
             $.ajax({
                 url: '@Url.Action("Create", "Categories")',
                 type: 'POST',
                 data: formData,
+                headers: {
+                    'RequestVerificationToken': token
+                },
                 success: function(response) {
                     if (response.success) {
                         showToast('success', response.message);
@@ -158,13 +134,8 @@
                     }
                 },
                 error: function(xhr) {
-                    // Handle validation errors
-                    if (xhr.status === 400) {
-                        $('#formPanel').html(xhr.responseText);
-                        feather.replace();
-                    } else {
-                        showToast('error', 'An error occurred.');
-                    }
+                    console.error('Error:', xhr);
+                    showToast('error', 'An error occurred. Please try again.');
                 }
             });
         }
@@ -172,11 +143,15 @@
         // Submit edit form
         function submitEditForm() {
             var formData = $('#editCategoryForm').serialize();
+            var token = $('input[name="__RequestVerificationToken"]').val();
 
             $.ajax({
                 url: '@Url.Action("Edit", "Categories")',
                 type: 'POST',
                 data: formData,
+                headers: {
+                    'RequestVerificationToken': token
+                },
                 success: function(response) {
                     if (response.success) {
                         showToast('success', response.message);
@@ -187,16 +162,11 @@
                     }
                 },
                 error: function(xhr) {
-                    if (xhr.status === 400) {
-                        $('#formPanel').html(xhr.responseText);
-                        feather.replace();
-                    } else {
-                        showToast('error', 'An error occurred.');
-                    }
+                    console.error('Error:', xhr);
+                    showToast('error', 'An error occurred. Please try again.');
                 }
             });
         }
-
         // Delete category
         function deleteCategory(id, name) {
             if (confirm(`Are you sure you want to delete category "${name}"? This action cannot be undone.`)) {
@@ -338,5 +308,4 @@
             feather.replace();
         });
     </script>
-</body>
-</html>
+}

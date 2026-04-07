@@ -1,3 +1,28 @@
+/* Scrollable Category Tree */
+.category-scroll-container {
+    max-height: calc(100vh - 250px);
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
+    .category-scroll-container::-webkit-scrollbar {
+        width: 6px;
+    }
+
+    .category-scroll-container::-webkit-scrollbar-track {
+        background: #f1f1f1;
+        border-radius: 3px;
+    }
+
+    .category-scroll-container::-webkit-scrollbar-thumb {
+        background: #888;
+        border-radius: 3px;
+    }
+
+        .category-scroll-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
 /* Sidebar Layout Styles */
 .wrapper {
     display: flex;

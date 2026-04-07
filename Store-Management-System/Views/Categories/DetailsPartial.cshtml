@@ -1,0 +1,64 @@
+﻿@model Category
+
+@{
+    var articleCount = ViewBag.ArticleCount ?? 0;
+}
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Category Details</h5>
+        <div>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadEditForm(@Model.Id)">
+                <i class="align-middle" data-feather="edit-2"></i> Edit
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteCategory(@Model.Id, '@Model.Name.Replace("'", "\\'")')">
+                <i class="align-middle" data-feather="trash-2"></i> Delete
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <table class="table table-bordered">
+            <tr>
+                <th style="width: 30%">Category Name</th>
+                <td>@Model.Name</td>
+            </tr>
+            <tr>
+                <th>Description</th>
+                <td>@(Model.Description ?? "N/A")</td>
+            </tr>
+            <tr>
+                <th>Parent Category</th>
+                <td>@(ViewBag.ParentName ?? "None (Root Category)")</td>
+            </tr>
+            <tr>
+                <th>Display Order</th>
+                <td>@Model.DisplayOrder</td>
+            </tr>
+            <tr>
+                <th>Status</th>
+                <td>
+                    <span class="badge @(Model.IsActive ? "bg-success" : "bg-danger")">
+                        @(Model.IsActive ? "Active" : "Inactive")
+                    </span>
+                </td>
+            </tr>
+            <tr>
+                <th>Articles Count</th>
+                <td>
+                    <span class="badge bg-primary">@articleCount articles</span>
+                </td>
+            </tr>
+            <tr>
+                <th>Created At</th>
+                <td>@Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</td>
+            </tr>
+            @if (Model.UpdatedAt.HasValue)
+            {
+                <tr>
+                    <th>Last Updated</th>
+                    <td>@Model.UpdatedAt.Value.ToString("MMM dd, yyyy HH:mm")</td>
+                </tr>
+            }
+        </table>
+    </div>
+</div>

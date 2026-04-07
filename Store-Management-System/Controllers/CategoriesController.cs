@@ -50,6 +50,10 @@ namespace Store_Management_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Create(CategoryCreateViewModel model)
         {
+
+            // Remove the SelectList from validation (it's not submitted)
+            ModelState.Remove("ParentCategories");
+
             // Check for duplicate name at same level
             var existingCategory = await _context.Categories
                 .FirstOrDefaultAsync(c => c.Name == model.Name && c.ParentId == model.ParentId && !c.IsDeleted);
@@ -76,23 +80,15 @@ namespace Store_Management_System.Controllers
                 _context.Categories.Add(category);
                 await _context.SaveChangesAsync();
 
-                if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-                {
-                    return Json(new { success = true, message = $"Category '{category.Name}' created successfully!" });
-                }
-
-                TempData["SuccessMessage"] = $"Category '{category.Name}' has been created successfully!";
-                return RedirectToAction(nameof(Index));
+                // Return JSON for AJAX request
+                return Json(new { success = true, message = $"Category '{category.Name}' created successfully!" });
             }
 
-            if (Request.Headers["X-Requested-With"] == "XMLHttpRequest")
-            {
-                await PopulateParentCategories(model.ParentId);
-                return PartialView("CreatePartial", model);
-            }
-
-            await PopulateParentCategories(model.ParentId);
-            return View(model);
+            // Return validation errors as JSON
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                          .Select(e => e.ErrorMessage)
+                                          .ToList();
+            return Json(new { success = false, message = string.Join(", ", errors) });
         }
 
         // GET: Categories/Edit/5
@@ -127,9 +123,12 @@ namespace Store_Management_System.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Edit(int id, CategoryEditViewModel model)
         {
+            // Remove the SelectList from validation (it's not submitted)
+            ModelState.Remove("ParentCategories");
+
             if (id != model.Id)
             {
-                return NotFound();
+                return Json(new { success = false, message = "Category ID mismatch." });
             }
 
             // Check for duplicate name at same level (excluding current)
@@ -152,7 +151,7 @@ namespace Store_Management_System.Controllers
                 var category = await _context.Categories.FindAsync(id);
                 if (category == null)
                 {
-                    return NotFound();
+                    return Json(new { success = false, message = "Category not found." });
                 }
 
                 category.Name = model.Name;
@@ -166,12 +165,14 @@ namespace Store_Management_System.Controllers
                 _context.Update(category);
                 await _context.SaveChangesAsync();
 
-                TempData["SuccessMessage"] = $"Category '{category.Name}' has been updated successfully!";
-                return RedirectToAction(nameof(Index));
+                return Json(new { success = true, message = $"Category '{category.Name}' updated successfully!" });
             }
 
-            await PopulateParentCategories(model.ParentId, id);
-            return View(model);
+            // Return validation errors as JSON
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                          .Select(e => e.ErrorMessage)
+                                          .ToList();
+            return Json(new { success = false, message = string.Join(", ", errors) });
         }
         // GET: Categories/TreePartial
         [HttpGet]
@@ -183,7 +184,8 @@ namespace Store_Management_System.Controllers
                 .ToListAsync();
 
             var tree = BuildCategoryTree(categories, null, 0, searchTerm);
-            return PartialView("_CategoryTreePartial", tree);
+            ViewBag.Categories = tree;
+            return PartialView("TreePartial");
         }
 
         // GET: Categories/DetailsPartial
@@ -267,9 +269,9 @@ namespace Store_Management_System.Controllers
 
             // Check if category has articles
             if (category.Articles != null && category.Articles.Any(a => a.IsActive))
-
             {
-                return Json(new { success = false, message = $"Cannot delete category '{category.Name}' because it has {category.Articles?.Count(a => a.IsActive) ?? 0} articles. Please reassign or delete the articles first." });
+                var activeArticleCount = category.Articles.Count(a => a.IsActive);
+                return Json(new { success = false, message = $"Cannot delete category '{category.Name}' because it has {activeArticleCount} active articles. Please reassign or delete the articles first." });
             }
 
             // Soft delete
@@ -283,7 +285,6 @@ namespace Store_Management_System.Controllers
 
             return Json(new { success = true, message = $"Category '{category.Name}' has been deleted successfully!" });
         }
-
         // POST: Categories/Reorder
         [HttpPost]
         [ValidateAntiForgeryToken]

@@ -1,0 +1,89 @@
+﻿@model SupplierCreateViewModel
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Create New Supplier</h5>
+    </div>
+    <div class="card-body">
+        <form id="createSupplierForm" method="post">
+            @Html.AntiForgeryToken()
+
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Name" class="form-label">Supplier Name *</label>
+                <input asp-for="Name" class="form-control" required />
+                <span asp-validation-for="Name" class="text-danger small"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="ContactPerson" class="form-label">Contact Person</label>
+                <input asp-for="ContactPerson" class="form-control" />
+                <span asp-validation-for="ContactPerson" class="text-danger small"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label asp-for="Email" class="form-label">Email</label>
+                        <input asp-for="Email" class="form-control" type="email" />
+                        <span asp-validation-for="Email" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label asp-for="Phone" class="form-label">Phone</label>
+                        <input asp-for="Phone" class="form-control" />
+                        <span asp-validation-for="Phone" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Address" class="form-label">Address</label>
+                <textarea asp-for="Address" class="form-control" rows="2"></textarea>
+                <span asp-validation-for="Address" class="text-danger small"></span>
+            </div>
+
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label asp-for="PaymentTerms" class="form-label">Payment Terms</label>
+                        <input asp-for="PaymentTerms" class="form-control" placeholder="e.g., Net 30, Net 60" />
+                        <span asp-validation-for="PaymentTerms" class="text-danger small"></span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label asp-for="CreditLimit" class="form-label">Credit Limit</label>
+                        <div class="input-group">
+                            <span class="input-group-text">$</span>
+                            <input asp-for="CreditLimit" class="form-control" type="number" step="0.01" />
+                        </div>
+                        <span asp-validation-for="CreditLimit" class="text-danger small"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input asp-for="IsActive" class="form-check-input" type="checkbox" role="switch" checked>
+                    <label asp-for="IsActive" class="form-check-label">Active Supplier</label>
+                </div>
+            </div>
+
+            <div class="mt-3 d-flex justify-content-end gap-2">
+                <button type="button" class="btn btn-secondary" onclick="loadCreateForm()">
+                    <i class="align-middle" data-feather="refresh-cw"></i> Reset
+                </button>
+                <button type="submit" class="btn btn-primary" onclick="event.preventDefault(); submitCreateForm();">
+                    <i class="align-middle" data-feather="save"></i> Create Supplier
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    feather.replace();
+</script>

@@ -6,7 +6,8 @@ namespace Store_Management_System.Models;
 public partial class Article
 {
     public int Id { get; set; }
-
+    public int? SupplierId { get; set; }
+  
     public string ArticleCode { get; set; } = null!;
 
     public string ArticleName { get; set; } = null!;
@@ -77,7 +78,7 @@ public partial class Article
 
     public int? UpdatedBy { get; set; }
     public virtual Category? Category { get; set; }
-  
+    public virtual Supplier? Supplier { get; set; }
     public virtual ICollection<ArticleBarcode> ArticleBarcodes { get; set; } = new List<ArticleBarcode>();
 
     public virtual ICollection<ArticlePrice> ArticlePrices { get; set; } = new List<ArticlePrice>();

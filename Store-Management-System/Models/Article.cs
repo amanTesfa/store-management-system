@@ -6,8 +6,7 @@ namespace Store_Management_System.Models;
 public partial class Article
 {
     public int Id { get; set; }
-    public int? SupplierId { get; set; }
-  
+
     public string ArticleCode { get; set; } = null!;
 
     public string ArticleName { get; set; } = null!;
@@ -77,9 +76,12 @@ public partial class Article
     public int? CreatedBy { get; set; }
 
     public int? UpdatedBy { get; set; }
-    public virtual Category? Category { get; set; }
-    public virtual Supplier? Supplier { get; set; }
+
+    public int? SupplierId { get; set; }
+
     public virtual ICollection<ArticleBarcode> ArticleBarcodes { get; set; } = new List<ArticleBarcode>();
+
+    public virtual Category? ArticleCategoryNavigation { get; set; }
 
     public virtual ICollection<ArticlePrice> ArticlePrices { get; set; } = new List<ArticlePrice>();
 
@@ -96,6 +98,8 @@ public partial class Article
     public virtual UnitOfMeasure? SalesUnit { get; set; }
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
+
+    public virtual Supplier? Supplier { get; set; }
 
     public virtual ICollection<VoucherLine> VoucherLines { get; set; } = new List<VoucherLine>();
 }

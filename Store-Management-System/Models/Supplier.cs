@@ -30,8 +30,12 @@ public partial class Supplier
     public bool IsActive { get; set; }
 
     public int? Rating { get; set; }
+
     public int? CreatedBy { get; set; }
+
     public int? UpdatedBy { get; set; }
+
     public virtual ICollection<Article> Articles { get; set; } = new List<Article>();
+
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();
 }

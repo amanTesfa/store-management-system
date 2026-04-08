@@ -51,7 +51,49 @@ public partial class Consignee
 
     public DateTime? UpdatedAt { get; set; }
 
+    public string? Tin { get; set; }
+
+    public string? Industry { get; set; }
+
+    public int? NumberOfEmployees { get; set; }
+
+    public decimal? AnnualRevenue { get; set; }
+
+    public string? Website { get; set; }
+
+    public int? ParentCompanyId { get; set; }
+
+    public string? FirstName { get; set; }
+
+    public string? LastName { get; set; }
+
+    public DateOnly? DateOfBirth { get; set; }
+
+    public string? Gender { get; set; }
+
+    public string? NationalId { get; set; }
+
+    public string? Occupation { get; set; }
+
+    public string? Reserved1 { get; set; }
+
+    public string? Reserved2 { get; set; }
+
+    public string? Reserved3 { get; set; }
+
+    public string? Reserved4 { get; set; }
+
+    public string? Reserved5 { get; set; }
+
+    public int? CreatedBy { get; set; }
+
+    public int? UpdatedBy { get; set; }
+
     public virtual ICollection<CustomerTaxExemption> CustomerTaxExemptions { get; set; } = new List<CustomerTaxExemption>();
+
+    public virtual ICollection<Consignee> InverseParentCompany { get; set; } = new List<Consignee>();
+
+    public virtual Consignee? ParentCompany { get; set; }
 
     public virtual ICollection<Voucher> Vouchers { get; set; } = new List<Voucher>();
 }

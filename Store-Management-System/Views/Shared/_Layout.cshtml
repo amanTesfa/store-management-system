@@ -160,7 +160,12 @@
                             <span class="align-middle">Categories</span>
                         </a>
                     </li>
-
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Customers" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="Customers" asp-action="Index">
+                            <i class="align-middle" data-feather="users"></i>
+                            <span class="align-middle">Customers</span>
+                        </a>
+                    </li>
                     <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Suppliers" ? "active" : "")">
                         <a class="sidebar-link" asp-controller="Suppliers" asp-action="Index">
                             <i class="align-middle" data-feather="truck"></i>
@@ -187,12 +192,7 @@
                         </a>
                     </li>
 
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Customers" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Customers" asp-action="Index">
-                            <i class="align-middle" data-feather="users"></i>
-                            <span class="align-middle">Customers</span>
-                        </a>
-                    </li>
+                  
                      
                     <!-- REPORTS -->
                     <li class="sidebar-header">

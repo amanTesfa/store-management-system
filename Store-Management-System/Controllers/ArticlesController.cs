@@ -22,7 +22,7 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Index(string searchTerm, int? categoryId, int page = 1, int pageSize = 10)
         {
             var query = _context.Articles
-                .Include(a => a.Category)
+                .Include(a => a.ArticleCategoryNavigation)
                 .Where(a => a.IsActive)
                 .AsQueryable();
 
@@ -51,7 +51,7 @@ namespace Store_Management_System.Controllers
                     ArticleCode = a.ArticleCode,
                     ArticleName = a.ArticleName,
                     Description = a.Description,
-                    CategoryName = a.Category != null ? a.Category.Name : null,
+                    CategoryName = a.ArticleCategoryNavigation != null ? a.ArticleCategoryNavigation.Name : null,
                     StandardPrice = a.StandardPrice,
                     CurrentStock = 0,
                     IsActive = a.IsActive
@@ -366,7 +366,7 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var article = await _context.Articles
-                .Include(a => a.Category)
+                .Include(a => a.ArticleCategory)
                 .Include(a => a.ArticleBarcodes)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
@@ -395,7 +395,7 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Delete(int id)
         {
             var article = await _context.Articles
-                .Include(a => a.Category)
+             .Include(a => a.ArticleCategoryNavigation)
                 .FirstOrDefaultAsync(a => a.Id == id);
 
             if (article == null)

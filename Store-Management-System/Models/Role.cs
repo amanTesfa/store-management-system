@@ -1,10 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
-using System;
+﻿using System;
 using System.Collections.Generic;
 
 namespace Store_Management_System.Models;
 
-public partial class Role: IdentityRole<int>
+public partial class Role
 {
     public int Id { get; set; }
 

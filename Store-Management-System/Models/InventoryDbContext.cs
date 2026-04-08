@@ -117,9 +117,9 @@ public partial class InventoryDbContext : DbContext
 
     public virtual DbSet<WithholdingTransaction> WithholdingTransactions { get; set; }
 
-//    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
-//#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
-//        => optionsBuilder.UseSqlServer("Server=THANOS;Database=InventoryDB;Trusted_Connection=True;TrustServerCertificate=True;");
+    protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
+#warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
+        => optionsBuilder.UseSqlServer("Server=THANOS;Database=InventoryDB;Trusted_Connection=True;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -171,7 +171,6 @@ public partial class InventoryDbContext : DbContext
 
             entity.HasIndex(e => e.ArticleCode, "UQ__Articles__3B99B1DE17FFB4E9").IsUnique();
 
-            entity.Property(e => e.ArticleCategory).HasMaxLength(100);
             entity.Property(e => e.ArticleCode).HasMaxLength(50);
             entity.Property(e => e.ArticleGroup).HasMaxLength(100);
             entity.Property(e => e.ArticleName).HasMaxLength(200);
@@ -198,11 +197,11 @@ public partial class InventoryDbContext : DbContext
             entity.Property(e => e.TaxRate).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.Weight).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.Width).HasColumnType("decimal(18, 6)");
-            // Relationship to Category
-            entity.HasOne(d => d.Category)
-                .WithMany(p => p.Articles)
+
+            entity.HasOne(d => d.ArticleCategoryNavigation).WithMany(p => p.Articles)
                 .HasForeignKey(d => d.ArticleCategory)
-                .HasConstraintName("FK_Articles_Category");
+                .HasConstraintName("FK_Articles_Categories");
+
             entity.HasOne(d => d.BaseUnit).WithMany(p => p.ArticleBaseUnits)
                 .HasForeignKey(d => d.BaseUnitId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -215,6 +214,10 @@ public partial class InventoryDbContext : DbContext
             entity.HasOne(d => d.SalesUnit).WithMany(p => p.ArticleSalesUnits)
                 .HasForeignKey(d => d.SalesUnitId)
                 .HasConstraintName("FK_Articles_SalesUnit");
+
+            entity.HasOne(d => d.Supplier).WithMany(p => p.Articles)
+                .HasForeignKey(d => d.SupplierId)
+                .HasConstraintName("FK_Articles_Supplier");
         });
 
         modelBuilder.Entity<ArticleBarcode>(entity =>
@@ -446,8 +449,17 @@ public partial class InventoryDbContext : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK__Consigne__3214EC07193DAE67");
 
+            entity.HasIndex(e => e.ConsigneeType, "IX_Consignees_ConsigneeType");
+
+            entity.HasIndex(e => e.Email, "IX_Consignees_Email");
+
+            entity.HasIndex(e => e.IsActive, "IX_Consignees_IsActive");
+
+            entity.HasIndex(e => e.Tin, "IX_Consignees_TIN");
+
             entity.HasIndex(e => e.ConsigneeCode, "UQ__Consigne__6CDF753AA5B227A8").IsUnique();
 
+            entity.Property(e => e.AnnualRevenue).HasColumnType("decimal(18, 2)");
             entity.Property(e => e.BillingAddress).HasMaxLength(500);
             entity.Property(e => e.City).HasMaxLength(100);
             entity.Property(e => e.ConsigneeCode).HasMaxLength(50);
@@ -461,15 +473,34 @@ public partial class InventoryDbContext : DbContext
             entity.Property(e => e.CreditLimit).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.CurrentBalance).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.Email).HasMaxLength(255);
+            entity.Property(e => e.FirstName).HasMaxLength(100);
+            entity.Property(e => e.Gender).HasMaxLength(20);
+            entity.Property(e => e.Industry).HasMaxLength(100);
             entity.Property(e => e.IsActive).HasDefaultValue(true);
+            entity.Property(e => e.LastName).HasMaxLength(100);
             entity.Property(e => e.Mobile).HasMaxLength(50);
+            entity.Property(e => e.NationalId).HasMaxLength(50);
+            entity.Property(e => e.Occupation).HasMaxLength(100);
             entity.Property(e => e.PaymentTerms).HasMaxLength(100);
             entity.Property(e => e.Phone).HasMaxLength(50);
             entity.Property(e => e.PostalCode).HasMaxLength(20);
             entity.Property(e => e.PriceLevel).HasMaxLength(50);
+            entity.Property(e => e.Reserved1).HasMaxLength(255);
+            entity.Property(e => e.Reserved2).HasMaxLength(255);
+            entity.Property(e => e.Reserved3).HasMaxLength(255);
+            entity.Property(e => e.Reserved4).HasMaxLength(255);
+            entity.Property(e => e.Reserved5).HasMaxLength(255);
             entity.Property(e => e.ShippingAddress).HasMaxLength(500);
             entity.Property(e => e.State).HasMaxLength(100);
             entity.Property(e => e.TaxNumber).HasMaxLength(50);
+            entity.Property(e => e.Tin)
+                .HasMaxLength(100)
+                .HasColumnName("TIN");
+            entity.Property(e => e.Website).HasMaxLength(255);
+
+            entity.HasOne(d => d.ParentCompany).WithMany(p => p.InverseParentCompany)
+                .HasForeignKey(d => d.ParentCompanyId)
+                .HasConstraintName("FK_Consignees_ParentCompany");
         });
 
         modelBuilder.Entity<Consignor>(entity =>

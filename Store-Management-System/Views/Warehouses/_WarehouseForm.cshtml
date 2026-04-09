@@ -1,0 +1,198 @@
+﻿@model WarehouseEditViewModel
+
+<form id="warehouseForm" asp-action="@(Model?.Id > 0 ? "Edit" : "Create")" method="post">
+    @Html.AntiForgeryToken()
+    @if (Model?.Id > 0)
+    {
+        <input type="hidden" asp-for="Id" />
+        <input type="hidden" asp-for="CreatedAt" />
+    }
+
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+    <!-- Basic Information -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="WarehouseCode" class="form-label">Warehouse Code *</label>
+                <input asp-for="WarehouseCode" class="form-control" placeholder="e.g., WH-001" />
+                <span asp-validation-for="WarehouseCode" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="WarehouseName" class="form-label">Warehouse Name *</label>
+                <input asp-for="WarehouseName" class="form-control" placeholder="e.g., Main Warehouse" />
+                <span asp-validation-for="WarehouseName" class="text-danger small"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="WarehouseType" class="form-label">Warehouse Type</label>
+                <input asp-for="WarehouseType" class="form-control" placeholder="e.g., Main, Retail, Virtual" />
+                <span asp-validation-for="WarehouseType" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="Location" class="form-label">Location</label>
+                <input asp-for="Location" class="form-control" placeholder="e.g., Building A, Floor 1" />
+                <span asp-validation-for="Location" class="text-danger small"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="ContactPerson" class="form-label">Contact Person</label>
+                <input asp-for="ContactPerson" class="form-control" placeholder="e.g., John Doe" />
+                <span asp-validation-for="ContactPerson" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="Phone" class="form-label">Phone</label>
+                <input asp-for="Phone" class="form-control" placeholder="e.g., (555) 123-4567" />
+                <span asp-validation-for="Phone" class="text-danger small"></span>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label">Email</label>
+                <input asp-for="Email" class="form-control" type="email" placeholder="e.g., warehouse@company.com" />
+                <span asp-validation-for="Email" class="text-danger small"></span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <label asp-for="Address" class="form-label">Address</label>
+                <textarea asp-for="Address" class="form-control" rows="1" placeholder="e.g., 123 Main Street, City, State 12345"></textarea>
+                <span asp-validation-for="Address" class="text-danger small"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Switches -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input asp-for="IsDefault" class="form-check-input" type="checkbox" role="switch">
+                    <label asp-for="IsDefault" class="form-check-label">Default Warehouse</label>
+                    <small class="text-muted d-block">Only one warehouse can be default</small>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="mb-3">
+                <div class="form-check form-switch">
+                    <input asp-for="IsActive"
+                           class="form-check-input"
+                           type="checkbox"
+                           role="switch"
+                           checked="@(Model?.IsActive)" />
+
+                    <label asp-for="IsActive" class="form-check-label">Active Warehouse</label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- System Information (only for Edit mode) -->
+    @if (Model?.Id > 0)
+    {
+        <div class="alert alert-info mt-3">
+            <i class="align-middle" data-feather="info"></i>
+            <strong>System Information</strong>
+            <hr class="my-2" />
+            <small>Created: @Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</small>
+            @if (Model.UpdatedAt.HasValue)
+            {
+                <br /><small>Last Updated: @Model.UpdatedAt.Value.ToString("MMM dd, yyyy HH:mm")</small>
+            }
+        </div>
+    }
+
+    <div class="d-flex justify-content-end gap-2 mt-3">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-primary" onclick="submitWarehouseForm()">
+            <i class="align-middle" data-feather="save"></i> Save
+        </button>
+    </div>
+</form>
+
+<script>
+    // Initialize Feather Icons
+    feather.replace();
+
+    // Submit form function
+    function submitWarehouseForm() {
+        var form = $('#warehouseForm');
+        var formData = form.serialize();
+        var token = $('input[name="__RequestVerificationToken"]').val();
+        var url = form.attr('action');
+
+        $.ajax({
+            url: url,
+            type: 'POST',
+            data: formData,
+            headers: {
+                'RequestVerificationToken': token
+            },
+            success: function(response) {
+                if (response.success) {
+                    $('#warehouseModal').modal('hide');
+                    showToast('success', response.message);
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                } else {
+                    showToast('error', response.message);
+                }
+            },
+            error: function(xhr) {
+                if (xhr.status === 400) {
+                    // Validation error - reload form with errors
+                    $('#modalBody').html(xhr.responseText);
+                    feather.replace();
+                } else {
+                    showToast('error', 'An error occurred. Please try again.');
+                }
+            }
+        });
+    }
+
+    // Toast notification
+    function showToast(type, message) {
+        var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+        var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+        
+        var toastHtml = `
+            <div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="align-middle me-2" data-feather="${icon}"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        $('body').append(toastHtml);
+        var toast = new bootstrap.Toast($('.toast').last());
+        toast.show();
+        
+        setTimeout(function() {
+            $('.toast').last().remove();
+        }, 3000);
+    }
+</script>

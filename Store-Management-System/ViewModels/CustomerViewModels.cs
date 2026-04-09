@@ -4,6 +4,30 @@ using System.ComponentModel.DataAnnotations.Schema;
 
 namespace Store_Management_System.ViewModels
 {
+
+    // For Customer Statement
+    public class CustomerStatementViewModel
+    {
+        public int CustomerId { get; set; }
+        public string CustomerName { get; set; } = string.Empty;
+        public string CustomerCode { get; set; } = string.Empty;
+        public DateTime FromDate { get; set; }
+        public DateTime ToDate { get; set; }
+        public decimal OpeningBalance { get; set; }
+        public List<CustomerStatementTransactionViewModel> Transactions { get; set; } = new();
+        public decimal ClosingBalance { get; set; }
+    }
+
+    public class CustomerStatementTransactionViewModel
+    {
+        public DateTime Date { get; set; }
+        public string Reference { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public decimal Debit { get; set; }  // Invoice amount (what customer owes)
+        public decimal Credit { get; set; } // Payment/Return (what customer paid)
+        public decimal Balance { get; set; } // Running balance
+        public int VoucherId { get; set; }
+    }
     // For Index/List page
     public class CustomerIndexViewModel
     {

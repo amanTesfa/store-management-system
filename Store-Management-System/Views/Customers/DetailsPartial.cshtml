@@ -10,6 +10,9 @@
             <button type="button" class="btn btn-sm btn-danger" onclick="deleteCustomer(@Model.Id, '@Model.DisplayName.Replace("'", "\\'")')">
                 <i class="align-middle" data-feather="trash-2"></i> Delete
             </button>
+            <button type="button" class="btn btn-sm btn-info" onclick="loadCustomerStatement(@Model.Id)">
+                <i class="align-middle" data-feather="file-text"></i> Statement
+            </button>
         </div>
     </div>
     <div class="card-body">

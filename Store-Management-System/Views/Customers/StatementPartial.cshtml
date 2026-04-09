@@ -1,0 +1,124 @@
+﻿@model CustomerStatementViewModel
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Customer Statement</h5>
+        <div>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="loadCustomerDetails(@Model.CustomerId)">
+                <i class="align-middle" data-feather="arrow-left"></i> Back to Details
+            </button>
+            <button type="button" class="btn btn-sm btn-primary" onclick="window.print()">
+                <i class="align-middle" data-feather="printer"></i> Print
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Date Range Filter -->
+        <form id="statementFilterForm" class="mb-4">
+            <input type="hidden" name="id" value="@Model.CustomerId" />
+            <div class="row g-3 align-items-end">
+                <div class="col-md-4">
+                    <label class="form-label">From Date</label>
+                    <input type="date" name="fromDate" class="form-control" value="@ViewBag.FromDate" />
+                </div>
+                <div class="col-md-4">
+                    <label class="form-label">To Date</label>
+                    <input type="date" name="toDate" class="form-control" value="@ViewBag.ToDate" />
+                </div>
+                <div class="col-md-4">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="align-middle" data-feather="refresh-cw"></i> Apply Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <!-- Customer Info -->
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="alert alert-info">
+                    <strong>Customer:</strong> @Model.CustomerName<br />
+                    <strong>Customer Code:</strong> @Model.CustomerCode<br />
+                    <strong>Statement Period:</strong> @Model.FromDate.ToString("MMM dd, yyyy") - @Model.ToDate.ToString("MMM dd, yyyy")
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="alert @(Model.ClosingBalance > 0 ? "alert-warning" : "alert-success")">
+                    <strong>Opening Balance:</strong> @Model.OpeningBalance.ToString("C")<br />
+                    <strong>Closing Balance:</strong> <strong>@Model.ClosingBalance.ToString("C")</strong><br />
+                    <small>@(Model.ClosingBalance > 0 ? "Customer owes this amount" : "Customer has credit balance")</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statement Table -->
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover">
+                <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Reference</th>
+                        <th>Description</th>
+                        <th class="text-end">Debit (Dr)</th>
+                        <th class="text-end">Credit (Cr)</th>
+                        <th class="text-end">Balance</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr class="table-secondary">
+                        <td colspan="5"><strong>Opening Balance</strong></td>
+                        <td class="text-end"><strong>@Model.OpeningBalance.ToString("C")</strong></td>
+                    </tr>
+
+                    @if (!Model.Transactions.Any())
+                    {
+                        <tr>
+                            <td colspan="6" class="text-center py-4">No transactions found for this period.</td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var transaction in Model.Transactions)
+                        {
+                            <tr>
+                                <td>@transaction.Date.ToString("MMM dd, yyyy")</td>
+                                <td><code>@transaction.Reference</code></td>
+                                <td>@transaction.Description</td>
+                                <td class="text-end">@(transaction.Debit > 0 ? transaction.Debit.ToString("C") : "-")</td>
+                                <td class="text-end">@(transaction.Credit > 0 ? transaction.Credit.ToString("C") : "-")</td>
+                                <td class="text-end">@transaction.Balance.ToString("C")</td>
+                            </tr>
+                        }
+                    }
+
+                    <tr class="table-primary fw-bold">
+                        <td colspan="5" class="text-end"><strong>Closing Balance</strong></td>
+                        <td class="text-end">@Model.ClosingBalance.ToString("C")</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Handle filter form submission
+    $('#statementFilterForm').on('submit', function(e) {
+        e.preventDefault();
+        var formData = $(this).serialize();
+        var customerId = @Model.CustomerId;
+
+        $.ajax({
+            url: '@Url.Action("StatementPartial", "Customers")',
+            type: 'GET',
+            data: formData,
+            success: function(response) {
+                $('#formPanel').html(response);
+                feather.replace();
+            },
+            error: function() {
+                showToast('error', 'Error loading statement.');
+            }
+        });
+    });
+</script>

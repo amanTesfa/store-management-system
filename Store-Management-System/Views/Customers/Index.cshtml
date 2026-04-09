@@ -341,5 +341,21 @@
         $(document).ready(function() {
             feather.replace();
         });
+
+                // Load customer statement
+        function loadCustomerStatement(id) {
+            $.ajax({
+                url: '@Url.Action("StatementPartial", "Customers")',
+                type: 'GET',
+                data: { id: id },
+                success: function(response) {
+                    $('#formPanel').html(response);
+                    feather.replace();
+                },
+                error: function() {
+                    showToast('error', 'Error loading customer statement.');
+                }
+            });
+        }
     </script>
 }

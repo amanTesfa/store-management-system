@@ -366,7 +366,7 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var article = await _context.Articles
-                .Include(a => a.ArticleCategory)
+                .Include(a => a.ArticleCategoryNavigation)
                 .Include(a => a.ArticleBarcodes)
                 .FirstOrDefaultAsync(a => a.Id == id);
 

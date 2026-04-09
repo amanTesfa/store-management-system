@@ -1,0 +1,74 @@
+﻿@model FiscalPeriodIndexViewModel
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="input-group w-50">
+        <input type="text" id="periodSearch" class="form-control" placeholder="Search periods..." value="@Model.SearchTerm" />
+        <button class="btn btn-outline-primary" id="searchPeriodBtn">
+            <i class="align-middle" data-feather="search"></i>
+        </button>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="openPeriodModal(0)">
+        <i class="align-middle" data-feather="plus"></i> Add Period
+    </button>
+</div>
+
+<div class="table-responsive">
+    <table class="table table-hover">
+        <thead>
+            <tr>
+                <th>Period Name</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var p in Model.Periods)
+            {
+                <tr>
+                    <td><span><strong>@p.PeriodName</strong></span></td>
+                    <td><span>@p.StartDate.ToString("MMM dd, yyyy")</span></td>
+                    <td><span>@p.EndDate.ToString("MMM dd, yyyy")</span></td>
+                    <td><span class="badge @(p.IsClosed ? "bg-danger" : "bg-success")">@(p.IsClosed ? "Closed" : "Open")</span></td>
+                    <td>
+                        <button class="btn btn-sm btn-primary" onclick="openPeriodModal(@p.Id)" title="Edit">
+                            <i class="align-middle" data-feather="edit-2"></i>
+                        </button>
+                        @if (!p.IsClosed)
+                        {
+                            <button class="btn btn-sm btn-warning" onclick="closePeriod(@p.Id, '@p.PeriodName')" title="Close Period">
+                                <i class="align-middle" data-feather="lock"></i>
+                            </button>
+                        }
+                        <button class="btn btn-sm btn-danger" onclick="deletePeriod(@p.Id, '@p.PeriodName')" title="Delete">
+                            <i class="align-middle" data-feather="trash-2"></i>
+                        </button>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<div class="mt-3 d-flex justify-content-between">
+    <small>Page @Model.CurrentPage of @Model.TotalPages</small>
+    <div>
+        <button class="btn btn-sm btn-outline-secondary" onclick="changePeriodPage(@Model.CurrentPage - 1)" @(Model.CurrentPage <= 1 ? "disabled" : "")>Previous</button>
+        <button class="btn btn-sm btn-outline-secondary" onclick="changePeriodPage(@Model.CurrentPage + 1)" @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")>Next</button>
+    </div>
+</div>
+
+<script>
+    var periodPage = @Model.CurrentPage;
+    var periodSearch = '@Model.SearchTerm';
+
+    function refreshPeriods() {
+        var url = '@Url.Action("FiscalPeriodsList", "SystemSetup")?searchTerm=' + encodeURIComponent(periodSearch) + '&page=' + periodPage;
+        $.ajax({ url: url, success: function(r) { $('#fiscalContent').html(r); feather.replace(); } });
+    }
+
+    function changePeriodPage(page) { periodPage = page; refreshPeriods(); }
+    $('#periodSearch').on('keypress', function(e) { if (e.which === 13) { periodSearch = $(this).val(); periodPage = 1; refreshPeriods(); } });
+    $('#searchPeriodBtn').on('click', function() { periodSearch = $('#periodSearch').val(); periodPage = 1; refreshPeriods(); });
+</script>

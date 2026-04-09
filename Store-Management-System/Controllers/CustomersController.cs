@@ -457,7 +457,74 @@ namespace Store_Management_System.Controllers
 
             return $"{prefix}{nextNumber:D6}";
         }
+        // GET: Customers/StatementPartial/5
+        [HttpGet]
+        public async Task<IActionResult> StatementPartial(int id, DateTime? fromDate = null, DateTime? toDate = null)
+        {
+            var customer = await _context.Consignees
+                .FirstOrDefaultAsync(c => c.Id == id && c.IsActive);
 
+            if (customer == null)
+            {
+                return NotFound();
+            }
+
+            // Set default date range (last 3 months if not specified)
+            if (!fromDate.HasValue)
+                fromDate = DateTime.UtcNow.AddMonths(-3);
+            if (!toDate.HasValue)
+                toDate = DateTime.UtcNow;
+
+            // Convert DateTime to DateOnly for database comparison
+            var fromDateOnly = DateOnly.FromDateTime(fromDate.Value);
+            var toDateOnly = DateOnly.FromDateTime(toDate.Value);
+
+            // Get all vouchers for this customer (invoices, payments, credit notes, returns)
+            var transactions = await _context.Vouchers
+                .Where(v => v.ConsigneeId == id && v.VoucherDate >= fromDateOnly && v.VoucherDate <= toDateOnly)
+                .OrderBy(v => v.VoucherDate)
+                .Select(v => new CustomerStatementTransactionViewModel
+                {
+                    Date = v.VoucherDate.ToDateTime(TimeOnly.MinValue),
+                    Reference = v.VoucherNumber,
+                    Description = v.VoucherType,
+                    Debit = v.VoucherType == "Invoice" ? v.TotalAmount : 0,
+                    Credit = (v.VoucherType == "Payment" || v.VoucherType == "CreditNote") ? v.TotalAmount : 0,
+                    VoucherId = v.Id
+                })
+                .ToListAsync();
+
+            // Calculate running balance
+            decimal runningBalance = 0;
+            foreach (var transaction in transactions)
+            {
+                runningBalance += transaction.Debit - transaction.Credit;
+                transaction.Balance = runningBalance;
+            }
+
+            // Get opening balance (transactions before fromDate)
+            var openingBalance = await _context.Vouchers
+                .Where(v => v.ConsigneeId == id && v.VoucherDate < fromDateOnly)
+                .SumAsync(v => v.VoucherType == "Invoice" ? v.TotalAmount :
+                              (v.VoucherType == "Payment" || v.VoucherType == "CreditNote") ? -v.TotalAmount : 0);
+
+            var model = new CustomerStatementViewModel
+            {
+                CustomerId = customer.Id,
+                CustomerName = customer.ConsigneeName,
+                CustomerCode = customer.ConsigneeCode,
+                FromDate = fromDate.Value,
+                ToDate = toDate.Value,
+                OpeningBalance = openingBalance,
+                Transactions = transactions,
+                ClosingBalance = runningBalance + openingBalance
+            };
+
+            ViewBag.FromDate = fromDate.Value.ToString("yyyy-MM-dd");
+            ViewBag.ToDate = toDate.Value.ToString("yyyy-MM-dd");
+
+            return PartialView("StatementPartial", model);
+        }
         // Helper: Populate dropdowns
         private async Task PopulateDropdowns(BaseCustomerViewModel model)
         {

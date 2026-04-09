@@ -143,9 +143,14 @@
                     </li>
 
                     <!-- INVENTORY MANAGEMENT -->
-                    <li class="sidebar-header">
-                        Inventory
+                    <li class="sidebar-header">System Setup</li>
+                    <li class="sidebar-item">
+                        <a class="sidebar-link" asp-controller="SystemSetup" asp-action="Index">
+                            <i class="align-middle" data-feather="settings"></i>
+                            <span class="align-middle">System Setup</span>
+                        </a>
                     </li>
+                
 
                     <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Articles" ? "active" : "")">
                         <a class="sidebar-link" asp-controller="Articles" asp-action="Index">
@@ -173,18 +178,19 @@
                         </a>
                     </li>
 
+                  
+                 
+                    
+                    <!-- SALES & ORDERS -->
+                    <li class="sidebar-header">
+                        Sales
+                    </li>
                     <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "StockMovements" ? "active" : "")">
                         <a class="sidebar-link" asp-controller="StockMovements" asp-action="Index">
                             <i class="align-middle" data-feather="activity"></i>
                             <span class="align-middle">Stock Movements</span>
                         </a>
                     </li>
-
-                    <!-- SALES & ORDERS -->
-                    <li class="sidebar-header">
-                        Sales
-                    </li>
-
                     <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Orders" ? "active" : "")">
                         <a class="sidebar-link" asp-controller="Orders" asp-action="Index">
                             <i class="align-middle" data-feather="shopping-cart"></i>

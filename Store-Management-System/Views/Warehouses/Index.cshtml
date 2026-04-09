@@ -1,0 +1,261 @@
+﻿@model WarehouseIndexViewModel
+
+@{
+    ViewData["Title"] = "Warehouses";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Warehouses</h1>
+        <span class="badge bg-dark text-white ms-2">Storage Locations</span>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="openCreateModal()">
+        <i class="align-middle" data-feather="plus"></i> Add Warehouse
+    </button>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by code, name, location..." value="@Model.SearchTerm" />
+                    <button class="btn btn-outline-primary" id="searchBtn">
+                        <i class="align-middle" data-feather="search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Code</th>
+                        <th>Name</th>
+                        <th>Location</th>
+                        <th>Type</th>
+                        <th>Stock Items</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Warehouses.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="align-middle" data-feather="home" style="width: 48px; height: 48px;"></i>
+                                <p class="mt-2 mb-0">No warehouses found. Click "Add Warehouse" to get started.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var warehouse in Model.Warehouses)
+                        {
+                            <tr>
+                                <td><code>@warehouse.WarehouseCode</code></td>
+                                <td><strong>@warehouse.WarehouseName</strong></td>
+                                <td>@(warehouse.Location ?? "-")</td>
+                                <td>@(warehouse.WarehouseType ?? "-")</td>
+                                <td><span class="badge bg-info">@warehouse.StockCount</span></td>
+                                <td>
+                                    <span class="badge @(warehouse.IsActive ? "bg-success" : "bg-secondary")">
+                                        @(warehouse.IsActive ? "Active" : "Inactive")
+                                    </span>
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="openEditModal(@warehouse.Id)" title="Edit">
+                                            <i class="align-middle" data-feather="edit-2"></i>
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteWarehouse(@warehouse.Id, '@warehouse.WarehouseName.Replace("'", "\\'")')" title="Delete">
+                                            <i class="align-middle" data-feather="trash-2"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between align-items-center">
+            <small class="text-muted">Page @Model.CurrentPage of @Model.TotalPages</small>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" @(Model.CurrentPage <= 1 ? "disabled" : "")>
+                    <i class="align-middle" data-feather="chevron-left"></i>
+                </button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")>
+                    <i class="align-middle" data-feather="chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create/Edit Modal -->
+<div class="modal fade" id="warehouseModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalTitle">Add Warehouse</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Form will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        var currentPage = @Model.CurrentPage;
+        var searchTerm = '@Model.SearchTerm';
+
+        function refreshPage() {
+            var url = '@Url.Action("Index", "Warehouses")?searchTerm=' + encodeURIComponent(searchTerm) + '&page=' + currentPage;
+            window.location.href = url;
+        }
+
+              function openCreateModal() {
+            $('#modalTitle').text('Add Warehouse');
+            $.ajax({
+                url: '@Url.Action("CreatePartial", "Warehouses")',
+                type: 'GET',
+                success: function(response) {
+                    $('#modalBody').html(response);
+                    $('#warehouseModal').modal('show');
+                    feather.replace();
+                },
+                error: function() {
+                    showToast('error', 'Error loading form.');
+                }
+            });
+        }
+
+              // Open edit modal
+        function openEditModal(id) {
+            $('#modalTitle').text('Edit Warehouse');
+            $.ajax({
+                url: '@Url.Action("EditPartial", "Warehouses")',
+                type: 'GET',
+                data: { id: id },
+                success: function(response) {
+                    $('#modalBody').html(response);
+                    $('#warehouseModal').modal('show');
+                    feather.replace();
+                },
+                error: function() {
+                    showToast('error', 'Error loading warehouse data.');
+                }
+            });
+        }
+
+        // Submit form (already in your code)
+        function submitWarehouseForm() {
+            var form = $('#warehouseForm');
+            var formData = form.serialize();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var url = form.attr('action');  // This will be "Edit" or "Create"
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                headers: { 'RequestVerificationToken': token },
+                success: function(response) {
+                    if (response.success) {
+                        $('#warehouseModal').modal('hide');
+                        showToast('success', response.message);
+                        setTimeout(function() { location.reload(); }, 1000);
+                    } else {
+                        showToast('error', response.message);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 400) {
+                        $('#modalBody').html(xhr.responseText);
+                        feather.replace();
+                    } else {
+                        showToast('error', 'An error occurred.');
+                    }
+                }
+            });
+        }
+        function submitForm() {
+            var form = $('#warehouseForm');
+            var formData = form.serialize();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var url = form.attr('action');
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                headers: { 'RequestVerificationToken': token },
+                success: function(response) {
+                    if (response.success) {
+                        $('#warehouseModal').modal('hide');
+                        showToast('success', response.message);
+                        refreshPage();
+                    } else {
+                        showToast('error', response.message);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 400) {
+                        $('#modalBody').html(xhr.responseText);
+                        feather.replace();
+                    } else {
+                        showToast('error', 'An error occurred.');
+                    }
+                }
+            });
+        }
+
+        function deleteWarehouse(id, name) {
+            if (confirm(`Are you sure you want to delete warehouse "${name}"?`)) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Delete", "Warehouses")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    }
+                });
+            }
+        }
+
+        function previousPage() { if (currentPage > 1) { currentPage--; refreshPage(); } }
+        function nextPage() { currentPage++; refreshPage(); }
+
+        $('#searchBtn').on('click', function() { searchTerm = $('#searchInput').val(); currentPage = 1; refreshPage(); });
+        $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); currentPage = 1; refreshPage(); } });
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+
+        $(document).ready(function() { feather.replace(); });
+    </script>
+}

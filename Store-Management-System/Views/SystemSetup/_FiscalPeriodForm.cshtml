@@ -36,11 +36,10 @@
     <div class="row">
         <div class="col-md-6">
             <div class="form-check form-switch">
-                <input asp-for="IsActive"
+                <input asp-for="IsClosed"
                        class="form-check-input"
                        type="checkbox"
-                       role="switch"
-                       checked="@(Model?.IsActive)" />
+                       role="switch" />
                 <label asp-for="IsClosed" class="form-check-label">Closed Period</label>
                 <small class="text-muted d-block">Closed periods cannot be modified</small>
             </div>
@@ -51,7 +50,10 @@
     {
         <div class="alert alert-info mt-3">
             <small>Created: @Model.CreatedAt.ToString("MMM dd, yyyy HH:mm")</small>
-            @if (Model.UpdatedAt.HasValue) { <br /><small>Updated: @Model.UpdatedAt.Value.ToString("MMM dd, yyyy HH:mm")</small> }
+            @if (Model.UpdatedAt.HasValue)
+            {
+                <br /><small>Updated: @Model.UpdatedAt.Value.ToString("MMM dd, yyyy HH:mm")</small>
+            }
         </div>
     }
 

@@ -295,47 +295,97 @@ public partial class InventoryDbContext : DbContext
 
         modelBuilder.Entity<BeginningBalance>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Beginnin__3214EC07754B364E");
+            entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => e.BalanceNumber, "UQ__Beginnin__EB7FB1606BCEFD76").IsUnique();
+            entity.Property(e => e.BalanceNumber)
+                .IsRequired()
+                .HasMaxLength(50);
 
-            entity.Property(e => e.BalanceNumber).HasMaxLength(50);
-            entity.Property(e => e.CreatedAt).HasDefaultValueSql("(getutcdate())");
-            entity.Property(e => e.Description).HasMaxLength(500);
             entity.Property(e => e.Status)
+                .IsRequired()
                 .HasMaxLength(20)
                 .HasDefaultValue("Draft");
 
-            entity.HasOne(d => d.FiscalPeriod).WithMany(p => p.BeginningBalances)
-                .HasForeignKey(d => d.FiscalPeriodId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_BeginningBalances_Period");
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.ApprovalComments).HasMaxLength(500);
+
+            entity.HasIndex(e => e.BalanceNumber).IsUnique();
+            entity.HasIndex(e => e.Status);
+
+            // Fiscal Period relationship
+            entity.HasOne(e => e.FiscalPeriod)
+                .WithMany(p => p.BeginningBalances)
+                .HasForeignKey(e => e.FiscalPeriodId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Warehouse relationship
+            entity.HasOne(e => e.Warehouse)
+                .WithMany(w => w.BeginningBalances)
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // User relationships - EXPLICITLY configure each one
+            entity.HasOne(e => e.CreatedByNavigation)
+                .WithMany(u => u.CreatedBeginningBalances)
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ApprovedByNavigation)
+                .WithMany(u => u.ApprovedBeginningBalances)
+                .HasForeignKey(e => e.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.PostedByNavigation)
+                .WithMany(u => u.PostedBeginningBalances)
+                .HasForeignKey(e => e.PostedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.UpdatedByNavigation)
+                .WithMany(u => u.UpdatedBeginningBalances)
+                .HasForeignKey(e => e.UpdatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<BeginningBalanceLine>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__Beginnin__3214EC078CD4A62E");
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.Quantity)
+                .HasColumnType("decimal(18, 6)");
+
+            entity.Property(e => e.UnitCost)
+                .HasColumnType("decimal(18, 6)");
 
             entity.Property(e => e.BatchNumber).HasMaxLength(100);
-            entity.Property(e => e.Notes).HasMaxLength(500);
-            entity.Property(e => e.Quantity).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.SerialNumber).HasMaxLength(100);
-            entity.Property(e => e.TotalValue).HasColumnType("decimal(18, 6)");
-            entity.Property(e => e.UnitCost).HasColumnType("decimal(18, 6)");
+            entity.Property(e => e.Notes).HasMaxLength(500);
 
-            entity.HasOne(d => d.Article).WithMany(p => p.BeginningBalanceLines)
-                .HasForeignKey(d => d.ArticleId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_BBLines_Article");
+            entity.HasIndex(e => e.ArticleId);
+            entity.HasIndex(e => e.BeginningBalanceId);
 
-            entity.HasOne(d => d.BeginningBalance).WithMany(p => p.BeginningBalanceLines)
-                .HasForeignKey(d => d.BeginningBalanceId)
-                .HasConstraintName("FK_BBLines_Balance");
+            // Relationship to BeginningBalance
+            entity.HasOne(e => e.BeginningBalance)
+                .WithMany(b => b.BeginningBalanceLines)
+                .HasForeignKey(e => e.BeginningBalanceId)
+                .OnDelete(DeleteBehavior.Cascade);
 
-            entity.HasOne(d => d.Warehouse).WithMany(p => p.BeginningBalanceLines)
-                .HasForeignKey(d => d.WarehouseId)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_BBLines_Warehouse");
+            // Relationship to Article
+            entity.HasOne(e => e.Article)
+                .WithMany(a => a.BeginningBalanceLines)
+                .HasForeignKey(e => e.ArticleId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Relationship to Warehouse
+            entity.HasOne(e => e.Warehouse)
+                .WithMany(w => w.BeginningBalanceLines)
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            // Relationship to User (CreatedBy)
+            entity.HasOne(e => e.CreatedByNavigation)
+                .WithMany(u => u.BeginningBalanceLines)
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
         });
 
         modelBuilder.Entity<Branch>(entity =>

@@ -42,7 +42,13 @@ public partial class User
     public DateTime CreatedAt { get; set; }
 
     public bool IsActive { get; set; }
+    // Beginning Balance relationships
 
+    public virtual ICollection<BeginningBalance> CreatedBeginningBalances { get; set; } = new List<BeginningBalance>();
+    public virtual ICollection<BeginningBalance> ApprovedBeginningBalances { get; set; } = new List<BeginningBalance>();
+    public virtual ICollection<BeginningBalance> PostedBeginningBalances { get; set; } = new List<BeginningBalance>();
+    public virtual ICollection<BeginningBalance> UpdatedBeginningBalances { get; set; } = new List<BeginningBalance>();
+    public virtual ICollection<BeginningBalanceLine> BeginningBalanceLines { get; set; } = new List<BeginningBalanceLine>();
     public virtual ICollection<Order> Orders { get; set; } = new List<Order>();
 
     public virtual ICollection<UserClaim> UserClaims { get; set; } = new List<UserClaim>();

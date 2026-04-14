@@ -158,7 +158,12 @@
                             <span class="align-middle">Articles</span>
                         </a>
                     </li>
-
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "BeginningBalance" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="BeginningBalance" asp-action="Index">
+                            <i class="align-middle" data-feather="database"></i>
+                            <span class="align-middle">Beginning Balance</span>
+                        </a>
+                    </li>
                     <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Categories" ? "active" : "")">
                         <a class="sidebar-link" asp-controller="Categories" asp-action="Index">
                             <i class="align-middle" data-feather="tag"></i>

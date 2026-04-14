@@ -45,6 +45,11 @@ namespace Store_Management_System.ViewModels
     public class FiscalPeriodEditViewModel : FiscalPeriodCreateViewModel
     {
         public int Id { get; set; }
+        public string PeriodName { get; set; } = string.Empty;
+        public string PeriodType { get; set; } = "Monthly";
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public bool IsClosed { get; set; }
         public DateTime CreatedAt { get; set; }
         public DateTime? UpdatedAt { get; set; }
     }

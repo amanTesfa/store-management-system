@@ -9,7 +9,7 @@ public partial class FiscalPeriod
 
     public string PeriodName { get; set; } = null!;
 
-    public string PeriodType { get; set; } = null!;
+   // public string PeriodType { get; set; } = null!;
 
     public DateOnly StartDate { get; set; }
 
@@ -22,9 +22,13 @@ public partial class FiscalPeriod
     public int? ClosedBy { get; set; }
 
     public int? NextPeriodId { get; set; }
-
+    public string PeriodType { get; set; } = "Monthly"; // Add this - 'Yearly', 'Quarterly', 'Monthly'
     public DateTime CreatedAt { get; set; }
-
+    // Add these missing fields
+ //   public DateTime CreatedAt { get; set; }
+    public int? CreatedBy { get; set; }
+    public DateTime? UpdatedAt { get; set; }
+    public int? UpdatedBy { get; set; }
     public virtual ICollection<AccountLedger> AccountLedgers { get; set; } = new List<AccountLedger>();
 
     public virtual ICollection<BeginningBalance> BeginningBalances { get; set; } = new List<BeginningBalance>();

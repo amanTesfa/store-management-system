@@ -78,7 +78,7 @@ public partial class Article
     public int? UpdatedBy { get; set; }
 
     public int? SupplierId { get; set; }
-
+    //public virtual ICollection<BeginningBalanceLine> BeginningBalanceLines { get; set; } = new List<BeginningBalanceLine>();
     public virtual ICollection<ArticleBarcode> ArticleBarcodes { get; set; } = new List<ArticleBarcode>();
 
     public virtual Category? ArticleCategoryNavigation { get; set; }

@@ -9,9 +9,9 @@ public partial class StockMovement
 
     public string MovementNumber { get; set; } = null!;
 
-    public int VoucherId { get; set; }
+    public int? VoucherId { get; set; }
 
-    public int VoucherLineId { get; set; }
+    public int? VoucherLineId { get; set; }
 
     public int ArticleId { get; set; }
 

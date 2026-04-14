@@ -25,6 +25,170 @@ namespace Store_Management_System.Controllers
 
         [HttpGet]
         public IActionResult FiscalPeriodCreatePartial() => PartialView("_FiscalPeriodForm", new FiscalPeriodEditViewModel());
+        // ==================== FISCAL PERIODS ====================
+
+        // GET: FiscalPeriodCreatePartial
+
+
+        // POST: FiscalPeriodCreate
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FiscalPeriodCreate(FiscalPeriodEditViewModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var startDate = DateOnly.FromDateTime(model.StartDate);
+                var endDate = DateOnly.FromDateTime(model.EndDate);
+
+                // Check for overlapping periods
+                var overlapping = await _context.FiscalPeriods
+                    .AnyAsync(f => (startDate <= f.EndDate && endDate >= f.StartDate));
+
+                if (overlapping)
+                {
+                    return Json(new { success = false, message = "Period overlaps with an existing fiscal period." });
+                }
+
+                var period = new FiscalPeriod
+                {
+                    PeriodType = "Monthly",
+                    PeriodName = model.PeriodName,
+                    StartDate = startDate,
+                    EndDate = endDate,
+                    IsClosed = model.IsClosed,
+                    CreatedAt = DateTime.UtcNow,
+                    CreatedBy = GetCurrentUserId()
+                };
+
+                _context.FiscalPeriods.Add(period);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = $"Fiscal period '{period.PeriodName}' created successfully!" });
+            }
+
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                          .Select(e => e.ErrorMessage)
+                                          .ToList();
+            return Json(new { success = false, message = string.Join(", ", errors) });
+        }
+
+
+        // GET: FiscalPeriodEditPartial/5
+        [HttpGet]
+        public async Task<IActionResult> FiscalPeriodEditPartial(int id)
+        {
+            var period = await _context.FiscalPeriods.FindAsync(id);
+            if (period == null)
+            {
+                return NotFound();
+            }
+
+            var model = new FiscalPeriodEditViewModel
+            {
+                Id = period.Id,
+                PeriodName = period.PeriodName,
+                StartDate = period.StartDate.ToDateTime(TimeOnly.MinValue),
+                EndDate = period.EndDate.ToDateTime(TimeOnly.MinValue),
+                IsClosed = period.IsClosed,
+                CreatedAt = period.CreatedAt,
+                UpdatedAt = period.UpdatedAt
+            };
+
+            return PartialView("_FiscalPeriodForm", model);
+        }
+
+        // POST: FiscalPeriodEdit/5
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> FiscalPeriodEdit(int id, FiscalPeriodEditViewModel model)
+        {
+            if (id != model.Id)
+            {
+                return Json(new { success = false, message = "ID mismatch." });
+            }
+
+            if (ModelState.IsValid)
+            {
+                var period = await _context.FiscalPeriods.FindAsync(id);
+                if (period == null)
+                {
+                    return Json(new { success = false, message = "Fiscal period not found." });
+                }
+
+                var startDate = DateOnly.FromDateTime(model.StartDate);
+                var endDate = DateOnly.FromDateTime(model.EndDate);
+
+                // Check for overlapping periods (excluding current)
+                var overlapping = await _context.FiscalPeriods
+                    .AnyAsync(f => f.Id != id && (startDate <= f.EndDate && endDate >= f.StartDate));
+
+                if (overlapping)
+                {
+                    return Json(new { success = false, message = "Period overlaps with an existing fiscal period." });
+                }
+
+                period.PeriodName = model.PeriodName;
+                period.StartDate = startDate;
+                period.EndDate = endDate;
+                period.IsClosed = model.IsClosed;
+                period.UpdatedAt = DateTime.UtcNow;
+                period.UpdatedBy = GetCurrentUserId();
+
+                _context.Update(period);
+                await _context.SaveChangesAsync();
+
+                return Json(new { success = true, message = $"Fiscal period '{period.PeriodName}' updated successfully!" });
+            }
+
+            var errors = ModelState.Values.SelectMany(v => v.Errors)
+                                          .Select(e => e.ErrorMessage)
+                                          .ToList();
+            return Json(new { success = false, message = string.Join(", ", errors) });
+        }
+
+        // POST: FiscalPeriodDelete/5
+        [HttpPost]
+        public async Task<IActionResult> FiscalPeriodDelete(int id)
+        {
+            var period = await _context.FiscalPeriods
+                .Include(p => p.BeginningBalances)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (period == null)
+            {
+                return Json(new { success = false, message = "Fiscal period not found." });
+            }
+
+            if (period.BeginningBalances != null && period.BeginningBalances.Any())
+            {
+                return Json(new { success = false, message = "Cannot delete period with linked beginning balances." });
+            }
+
+            _context.FiscalPeriods.Remove(period);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"Fiscal period '{period.PeriodName}' deleted successfully!" });
+        }
+
+        // POST: ClosePeriod/5
+        [HttpPost]
+        public async Task<IActionResult> ClosePeriod(int id)
+        {
+            var period = await _context.FiscalPeriods.FindAsync(id);
+            if (period == null)
+            {
+                return Json(new { success = false, message = "Fiscal period not found." });
+            }
+
+            period.IsClosed = true;
+            period.UpdatedAt = DateTime.UtcNow;
+            period.UpdatedBy = GetCurrentUserId();
+
+            _context.Update(period);
+            await _context.SaveChangesAsync();
+
+            return Json(new { success = true, message = $"Fiscal period '{period.PeriodName}' closed successfully!" });
+        }
         // ==================== WAREHOUSES ====================
 
         [HttpGet]

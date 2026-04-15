@@ -1,0 +1,191 @@
+﻿@model GoodsReceiptViewModel
+
+@{
+    ViewData["Title"] = "Create Goods Receipt";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">Create Goods Receipt</h1>
+    <span class="badge bg-dark text-white ms-2">Receive Stock</span>
+</div>
+
+<form id="mainForm" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="VoucherNumber" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Receipt Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="PurchaseOrderId" class="form-label">Purchase Order *</label>
+                        <select asp-for="PurchaseOrderId" class="form-select" id="PurchaseOrderId" asp-items="Model.PurchaseOrders">
+                            <option value="">-- Select PO --</option>
+                        </select>
+                        <span asp-validation-for="PurchaseOrderId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ReceiptDate" class="form-label">Receipt Date *</label>
+                        <input asp-for="ReceiptDate" class="form-control" type="date" />
+                        <span asp-validation-for="ReceiptDate" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Remarks" class="form-label">Remarks</label>
+                        <textarea asp-for="Remarks" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" id="poInfo">
+                        Select a Purchase Order to see details.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Items to Receive</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0" id="itemsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th>Ordered</th>
+                            <th>Previously Received</th>
+                            <th>To Receive</th>
+                            <th>Unit Price</th>
+                            <th>Accept?</th>
+                            <th>Batch/Serial</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                        <tr>
+                            <td colspan="7" class="text-center py-4 text-muted">
+                                Select a Purchase Order to load items.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between">
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+        <button type="submit" class="btn btn-primary">
+            <i class="align-middle" data-feather="save"></i> Post Goods Receipt
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $('#PurchaseOrderId').on('change', function() {
+            var poId = $(this).val();
+            if (poId) {
+                $.ajax({
+                    url: '@Url.Action("GetPOLines", "GoodsReceipts")',
+                    type: 'GET',
+                    data: { poId: poId },
+                    success: function(response) {
+                        if (response.success) {
+                            loadPOLines(response);
+                        } else {
+                            $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load PO lines.</td></tr>');
+                        }
+                    }
+                });
+            } else {
+                $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-muted">Select a Purchase Order to load items.</td></tr>');
+                $('#poInfo').html('Select a Purchase Order to see details.');
+            }
+        });
+
+        function loadPOLines(data) {
+            var html = '';
+            var index = 0;
+
+            $('#poInfo').html(`<strong>PO #${data.poNumber}</strong><br />Warehouse: ${data.warehouseId}`);
+
+            for (var i = 0; i < data.lines.length; i++) {
+                var line = data.lines[i];
+                if (line.availableToReceive <= 0) continue;
+
+                html += `
+                    <tr class="receipt-line" data-index="${index}">
+                        <input type="hidden" name="Lines[${index}].PurchaseOrderLineId" value="${line.lineId}" />
+                        <input type="hidden" name="Lines[${index}].ArticleId" value="${line.articleId}" />
+                        <input type="hidden" name="Lines[${index}].UnitPrice" value="${line.unitPrice}" />
+                        <td><strong>${line.articleCode}</strong><br /><small>${line.articleName}</small></td>
+                        <td class="text-end">${line.orderedQuantity}</td>
+                        <td class="text-end">${line.previouslyReceived}</td>
+                        <td><input type="number" name="Lines[${index}].QuantityToReceive" class="form-control receive-qty" style="width: 100px;" value="${line.availableToReceive}" max="${line.availableToReceive}" onchange="updateLandedCost(${index})" /></td>
+                        <td class="text-end">$${line.unitPrice.toFixed(2)}</td>
+                        <td class="text-center">
+                            <div class="form-check">
+                                <input type="checkbox" name="Lines[${index}].IsAccepted" class="form-check-input accept-check" checked onchange="toggleAccept(${index})" />
+                            </div>
+                        </td>
+                        <td>
+                            ${line.isBatchTracked ? `<input type="text" name="Lines[${index}].BatchNumber" class="form-control form-control-sm mb-1" placeholder="Batch #" />` : ''}
+                            ${line.isSerialized ? `<input type="text" name="Lines[${index}].SerialNumber" class="form-control form-control-sm mb-1" placeholder="Serial #" />` : ''}
+                            ${line.isExpiryTracked ? `<input type="date" name="Lines[${index}].ExpiryDate" class="form-control form-control-sm" />` : ''}
+                        </td>
+                    </tr>
+                `;
+                index++;
+            }
+
+            if (index === 0) {
+                html = '<tr><td colspan="7" class="text-center py-4 text-muted">No items available to receive for this PO.</td></tr>';
+            }
+
+            $('#itemsBody').html(html);
+        }
+
+        function toggleAccept(index) {
+            var isChecked = $(`input[name="Lines[${index}].IsAccepted"]`).is(':checked');
+            if (!isChecked) {
+                $(`input[name="Lines[${index}].QuantityToReceive"]`).val(0).prop('disabled', true);
+                var reason = prompt('Reason for rejection:');
+                if (reason) {
+                    $(`<input type="hidden" name="Lines[${index}].RejectionReason" value="${reason}" />`).appendTo(`tr[data-index="${index}"]`);
+                }
+            } else {
+                var available = $(`tr[data-index="${index}"] .receive-qty`).attr('max');
+                $(`input[name="Lines[${index}].QuantityToReceive"]`).val(available).prop('disabled', false);
+            }
+        }
+
+        function updateLandedCost(index) {
+            // Simple landed cost calculation - can be enhanced
+            var qty = parseFloat($(`input[name="Lines[${index}].QuantityToReceive"]`).val()) || 0;
+            var unitPrice = parseFloat($(`input[name="Lines[${index}].UnitPrice"]`).val()) || 0;
+            var landedCost = 0; // This will be distributed by backend
+            var finalCost = unitPrice + (landedCost / (qty || 1));
+            $(`input[name="Lines[${index}].FinalUnitCost"]`).val(finalCost.toFixed(2));
+        }
+    </script>
+}

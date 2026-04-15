@@ -580,6 +580,7 @@ public partial class InventoryDbContext : DbContext
             entity.Property(e => e.PostalCode).HasMaxLength(20);
             entity.Property(e => e.State).HasMaxLength(100);
             entity.Property(e => e.TaxNumber).HasMaxLength(50);
+           
         });
 
         modelBuilder.Entity<CurrentStock>(entity =>
@@ -1071,6 +1072,42 @@ public partial class InventoryDbContext : DbContext
 
         modelBuilder.Entity<Voucher>(entity =>
         {
+            entity.Property(e => e.WarehouseId);
+            entity.Property(e => e.ExpectedDate);
+            entity.Property(e => e.SentToSupplierAt);
+            entity.Property(e => e.PartiallyReceivedAt);
+            entity.Property(e => e.FullyReceivedAt);
+            entity.Property(e => e.ShippingCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.HandlingCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.InsuranceCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.OtherCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.TotalLandedCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.LandedCostDistributionMethod).HasMaxLength(20);
+            entity.Property(e => e.IsReturn).HasDefaultValue(false);
+            entity.Property(e => e.ReturnReason).HasMaxLength(500);
+            entity.Property(e => e.ApprovalComments).HasMaxLength(500);
+            entity.Property(e => e.ApprovedAt);
+            entity.Property(e => e.ApprovedBy);
+
+            // Add relationships
+            entity.HasOne(e => e.Consignor)
+   .WithMany(c => c.Vouchers)
+   .HasForeignKey(e => e.ConsignorId)
+   .OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ApprovedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.OriginalVoucher)
+                .WithMany(e => e.ReturnVouchers)
+                .HasForeignKey(e => e.OriginalVoucherId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasKey(e => e.Id).HasName("PK__Vouchers__3214EC07BC4E32A3");
 
             entity.HasIndex(e => e.ConsigneeId, "IX_Vouchers_ConsigneeId");
@@ -1140,6 +1177,11 @@ public partial class InventoryDbContext : DbContext
 
         modelBuilder.Entity<VoucherLine>(entity =>
         {
+            entity.Property(e => e.LandedCostPercentage).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.LandedCostAmount).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.FinalUnitCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.ReceivedQuantity).HasColumnType("decimal(18,6)");
             entity.HasKey(e => e.Id).HasName("PK__VoucherL__3214EC0713852835");
 
             entity.HasIndex(e => e.ArticleId, "IX_VoucherLines_ArticleId");

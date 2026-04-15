@@ -183,23 +183,29 @@
                         </a>
                     </li>
 
-                  
-                 
-                    
-                    <!-- SALES & ORDERS -->
-                    <li class="sidebar-header">
-                        Sales
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "StockMovements" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="StockMovements" asp-action="Index">
-                            <i class="align-middle" data-feather="activity"></i>
-                            <span class="align-middle">Stock Movements</span>
+
+
+
+                    <!-- Transactions Section -->
+                    <li class="sidebar-header">Transactions</li>
+
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrders" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="PurchaseOrders" asp-action="Index">
+                            <i class="align-middle" data-feather="shopping-cart"></i>
+                            <span class="align-middle">Purchase Orders</span>
                         </a>
                     </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Orders" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Orders" asp-action="Index">
-                            <i class="align-middle" data-feather="shopping-cart"></i>
-                            <span class="align-middle">Orders</span>
+
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "GoodsReceipts" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="GoodsReceipts" asp-action="Index">
+                            <i class="align-middle" data-feather="package"></i>
+                            <span class="align-middle">Goods Receipts</span>
+                        </a>
+                    </li>
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Returns" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="Returns" asp-action="Index">
+                            <i class="align-middle" data-feather="package"></i>
+                            <span class="align-middle">Returns</span>
                         </a>
                     </li>
 

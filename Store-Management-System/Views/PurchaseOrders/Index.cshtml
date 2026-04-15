@@ -1,0 +1,209 @@
+﻿@model PurchaseOrderIndexViewModel
+
+@{
+    ViewData["Title"] = "Purchase Orders";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Purchase Orders</h1>
+        <span class="badge bg-dark text-white ms-2">Procurement</span>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="align-middle" data-feather="plus"></i> New Purchase Order
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by PO # or Supplier..." value="@Model.SearchTerm" />
+            </div>
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-select" asp-items="Model.Statuses"></select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" id="searchBtn">
+                    <i class="align-middle" data-feather="search"></i> Search
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>PO #</th>
+                        <th>Supplier</th>
+                        <th>Date</th>
+                        <th>Expected Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Receipt Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.PurchaseOrders.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="align-middle" data-feather="shopping-cart" style="width: 48px; height: 48px;"></i>
+                                <p class="mt-2 mb-0">No purchase orders found.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var po in Model.PurchaseOrders)
+                        {
+                            <tr>
+                                <td><code>@po.VoucherNumber</code></td>
+                                <td><strong>@po.SupplierName</strong></td>
+                                <td><span>@po.VoucherDate.ToString("yyyy-MM-dd")</span></td>
+                                <td><span>@(po.ExpectedDate?.ToString("yyyy-MM-dd") ?? "-")</span></td>
+                                <td><span>@po.TotalAmount.ToString("C")</span></td>
+                                <td><span class="badge bg-@po.StatusClass">@po.Status</span></td>
+                                <td>
+                                    @if (po.ItemCount > 0)
+                                    {
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-success" role="progressbar" 
+                                                 style="width: @((po.ReceivedCount / (float)po.ItemCount * 100))%">
+                                                @po.ReceivedCount/@po.ItemCount
+                                            </div>
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span>0/@po.ItemCount</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@po.Id" class="btn btn-sm btn-info" title="View">
+                                            <i class="align-middle" data-feather="eye"></i>
+                                        </a>
+                                        @if (po.Status == "Draft")
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@po.Id" class="btn btn-sm btn-primary" title="Edit">
+                                                <i class="align-middle" data-feather="edit-2"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-success" onclick="approvePO(@po.Id)" title="Approve">
+                                                <i class="align-middle" data-feather="check-circle"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="cancelPO(@po.Id)" title="Cancel">
+                                                <i class="align-middle" data-feather="x-circle"></i>
+                                            </button>
+                                        }
+                                        @if (po.Status == "Approved")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="sendToSupplier(@po.Id)" title="Send to Supplier">
+                                                <i class="align-middle" data-feather="send"></i>
+                                            </button>
+                                        }
+                                        @if (po.Status == "Sent" || po.Status == "PartiallyReceived")
+                                        {
+                                            <a asp-controller="GoodsReceipts" asp-action="Create" asp-route-poId="@po.Id" class="btn btn-sm btn-success" title="Receive Goods">
+                                                <i class="align-middle" data-feather="package"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between">
+            <small>Page @Model.CurrentPage of @Model.TotalPages</small>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" disabled="@(Model.CurrentPage <= 1)">Previous</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" disabled="@(Model.CurrentPage >= Model.TotalPages)">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        var currentPage = @Model.CurrentPage;
+        var searchTerm = '@Model.SearchTerm';
+        var status = '@Model.Status';
+
+        function refreshPage() {
+            var url = '@Url.Action("Index", "PurchaseOrders")?searchTerm=' + encodeURIComponent(searchTerm) + '&status=' + encodeURIComponent(status) + '&page=' + currentPage;
+            window.location.href = url;
+        }
+
+        function previousPage() { if (currentPage > 1) { currentPage--; refreshPage(); } }
+        function nextPage() { currentPage++; refreshPage(); }
+
+        $('#searchBtn').on('click', function() { searchTerm = $('#searchInput').val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); });
+        $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); } });
+        $('#statusFilter').on('change', function() { status = $(this).val(); currentPage = 1; refreshPage(); });
+
+        function approvePO(id) {
+            if (confirm('Approve this purchase order?')) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Approve", "PurchaseOrders")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function sendToSupplier(id) {
+            if (confirm('Send this purchase order to supplier?')) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("SendToSupplier", "PurchaseOrders")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function cancelPO(id) {
+            var reason = prompt('Enter cancellation reason:');
+            if (reason) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Cancel", "PurchaseOrders")',
+                    type: 'POST',
+                    data: { id: id, reason: reason, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+    </script>
+}

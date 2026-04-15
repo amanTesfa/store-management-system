@@ -60,7 +60,13 @@ public partial class VoucherLine
     public decimal WithholdingAmount { get; set; }
 
     public string? WithholdingTaxCode { get; set; }
-
+    public decimal? LandedCostPercentage { get; set; }
+    public decimal? LandedCostAmount { get; set; }
+    public decimal? FinalUnitCost { get; set; }
+    public string? Reason { get; set; }
+   /// <summary>
+   /// public decimal? ReceivedQuantity { get; set; }  // For PO tracking
+   /// </summary>
     public virtual Article Article { get; set; } = null!;
 
     public virtual ICollection<ChargeAllocation> ChargeAllocations { get; set; } = new List<ChargeAllocation>();

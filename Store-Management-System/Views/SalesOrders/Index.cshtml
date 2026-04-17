@@ -1,16 +1,16 @@
-﻿@model PurchaseOrderIndexViewModel
+﻿@model SalesOrderIndexViewModel
 
 @{
-    ViewData["Title"] = "Purchase Orders";
+    ViewData["Title"] = "Sales Orders";
 }
 
 <div class="mb-3 d-flex justify-content-between align-items-center">
     <div>
-        <h1 class="h3 d-inline align-middle">Purchase Orders</h1>
-        <span class="badge bg-dark text-white ms-2">Procurement</span>
+        <h1 class="h3 d-inline align-middle">Sales Orders</h1>
+        <span class="badge bg-dark text-white ms-2">Sales</span>
     </div>
     <a asp-action="Create" class="btn btn-primary">
-        <i class="align-middle" data-feather="plus"></i> New Purchase Order
+        <i class="align-middle" data-feather="plus"></i> New Sales Order
     </a>
 </div>
 
@@ -18,7 +18,7 @@
     <div class="card-header">
         <div class="row g-3">
             <div class="col-md-4">
-                <input type="text" id="searchInput" class="form-control" placeholder="Search by PO # or Supplier..." value="@Model.SearchTerm" />
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by SO # or Customer..." value="@Model.SearchTerm" />
             </div>
             <div class="col-md-3">
                 <select id="statusFilter" class="form-select" asp-items="Model.Statuses"></select>
@@ -35,82 +35,76 @@
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
-                        <th>PO #</th>
-                        <th>Supplier</th>
+                        <th>SO #</th>
+                        <th>Customer</th>
                         <th>Date</th>
-                        <th>Expected Date</th>
+                        <th>Delivery Date</th>
                         <th>Total</th>
                         <th>Status</th>
-                        <th>Ordered / Received / Remaining</th>
+                        <th>Shipping Status</th>
                         <th>Actions</th>
-
                     </tr>
                 </thead>
                 <tbody>
-                    @if (!Model.PurchaseOrders.Any())
+                    @if (!Model.SalesOrders.Any())
                     {
                         <tr>
                             <td colspan="8" class="text-center py-4">
-                                <i class="align-middle" data-feather="shopping-cart" style="width: 48px; height: 48px;"></i>
-                                <p class="mt-2 mb-0">No purchase orders found.</p>
+                                <i class="align-middle" data-feather="shopping-bag" style="width: 48px; height: 48px;"></i>
+                                <p class="mt-2 mb-0">No sales orders found.</p>
                             </td>
                         </tr>
                     }
                     else
                     {
-                        @foreach (var po in Model.PurchaseOrders)
+                        @foreach (var so in Model.SalesOrders)
                         {
+                            var shippingPercent = so.ItemCount > 0 ? (so.ShippedCount / (float)so.ItemCount * 100) : 0;
                             <tr>
-                                <td><code>@po.VoucherNumber</code></td>
-                                <td><strong>@po.SupplierName</strong></td>
-                                <td><span>@po.VoucherDate.ToString("yyyy-MM-dd")</span></td>
-                                <td><span>@(po.ExpectedDate?.ToString("yyyy-MM-dd") ?? "-")</span></td>
-                                <td><span>@po.TotalAmount.ToString("C")</span></td>
-                                <td><span class="badge bg-@po.StatusClass">@po.Status</span></td>
+                                <td><code>@so.VoucherNumber</code></td>
+                                <td><strong>@so.CustomerName</strong></td>
+                                <td><span>@so.VoucherDate.ToString("yyyy-MM-dd")</span></td>
+                                <td><span>@(so.DeliveryDate?.ToString("yyyy-MM-dd") ?? "-")</span></td>
+                                <td><span>  @so.TotalAmount.ToString("C")</span></td>
+                                <td><span class="badge bg-@so.StatusClass">@so.Status</span></td>
                                 <td>
-                                    @{
-                                        var remaining = po.ItemCount - po.ReceivedCount;
-                                        var percentComplete = po.ItemCount > 0 ? (po.ReceivedCount / (float)po.ItemCount * 100) : 0;
-                                    }
-                                    <div class="d-flex justify-content-between small mb-1">
-                                        <span>Ordered: @po.ItemCount</span>
-                                        <span>Received: @po.ReceivedCount</span>
-                                        <span>Remaining: @remaining</span>
-                                    </div>
-                                    <div class="progress" style="height: 8px;">
-                                        <div class="progress-bar bg-success" role="progressbar"
-                                             style="width: @percentComplete%">
+                                    <div class="progress" style="height: 20px;">
+                                        <div class="progress-bar bg-info" role="progressbar" style="width: @shippingPercent%">
+                                            @so.ShippedCount/@so.ItemCount
                                         </div>
                                     </div>
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <a asp-action="Details" asp-route-id="@po.Id" class="btn btn-sm btn-info" title="View">
+                                        <a asp-action="Details" asp-route-id="@so.Id" class="btn btn-sm btn-info" title="View">
                                             <i class="align-middle" data-feather="eye"></i>
                                         </a>
-                                        @if (po.Status == "Draft")
+                                        @if (so.Status == "Draft")
                                         {
-                                            <a asp-action="Edit" asp-route-id="@po.Id" class="btn btn-sm btn-primary" title="Edit">
+                                            <a asp-action="Edit" asp-route-id="@so.Id" class="btn btn-sm btn-primary" title="Edit">
                                                 <i class="align-middle" data-feather="edit-2"></i>
                                             </a>
-                                            <button type="button" class="btn btn-sm btn-success" onclick="approvePO(@po.Id)" title="Approve">
+                                            <button type="button" class="btn btn-sm btn-success" onclick="approveSO(@so.Id)" title="Approve">
                                                 <i class="align-middle" data-feather="check-circle"></i>
                                             </button>
-                                            <button type="button" class="btn btn-sm btn-danger" onclick="cancelPO(@po.Id)" title="Cancel">
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="cancelSO(@so.Id)" title="Cancel">
                                                 <i class="align-middle" data-feather="x-circle"></i>
                                             </button>
                                         }
-                                        @if (po.Status == "Approved")
+                                        @if (so.Status == "Approved")
                                         {
-                                            <button type="button" class="btn btn-sm btn-primary" onclick="sendToSupplier(@po.Id)" title="Send to Supplier">
-                                                <i class="align-middle" data-feather="send"></i>
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="shipSO(@so.Id)" title="Mark as Shipped">
+                                                <i class="align-middle" data-feather="truck"></i>
                                             </button>
-                                        }
-                                        @if (po.Status == "Sent" || po.Status == "PartiallyReceived")
-                                        {
-                                            <a asp-controller="GoodsReceipts" asp-action="Create" asp-route-poId="@po.Id" class="btn btn-sm btn-success" title="Receive Goods">
-                                                <i class="align-middle" data-feather="package"></i>
+                                            <a asp-controller="Invoices" asp-action="Create" asp-route-soId="@so.Id" class="btn btn-sm btn-success" title="Generate Invoice">
+                                                <i class="align-middle" data-feather="file-text"></i>
                                             </a>
+                                        }
+                                        @if (so.Status == "Shipped")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-success" onclick="completeSO(@so.Id)" title="Complete Order">
+                                                <i class="align-middle" data-feather="check"></i>
+                                            </button>
                                         }
                                     </div>
                                 </td>
@@ -141,7 +135,7 @@
         var status = '@Model.Status';
 
         function refreshPage() {
-            var url = '@Url.Action("Index", "PurchaseOrders")?searchTerm=' + encodeURIComponent(searchTerm) + '&status=' + encodeURIComponent(status) + '&page=' + currentPage;
+            var url = '@Url.Action("Index", "SalesOrders")?searchTerm=' + encodeURIComponent(searchTerm) + '&status=' + encodeURIComponent(status) + '&page=' + currentPage;
             window.location.href = url;
         }
 
@@ -152,11 +146,11 @@
         $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); } });
         $('#statusFilter').on('change', function() { status = $(this).val(); currentPage = 1; refreshPage(); });
 
-        function approvePO(id) {
-            if (confirm('Approve this purchase order?')) {
+        function approveSO(id) {
+            if (confirm('Approve this sales order? This will reserve stock.')) {
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
-                    url: '@Url.Action("Approve", "PurchaseOrders")',
+                    url: '@Url.Action("Approve", "SalesOrders")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
@@ -167,11 +161,11 @@
             }
         }
 
-        function sendToSupplier(id) {
-            if (confirm('Send this purchase order to supplier?')) {
+        function shipSO(id) {
+            if (confirm('Mark this sales order as shipped?')) {
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
-                    url: '@Url.Action("SendToSupplier", "PurchaseOrders")',
+                    url: '@Url.Action("Ship", "SalesOrders")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
@@ -182,12 +176,27 @@
             }
         }
 
-        function cancelPO(id) {
+        function completeSO(id) {
+            if (confirm('Complete this sales order? This will update stock levels.')) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Complete", "SalesOrders")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function cancelSO(id) {
             var reason = prompt('Enter cancellation reason:');
             if (reason) {
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
-                    url: '@Url.Action("Cancel", "PurchaseOrders")',
+                    url: '@Url.Action("Cancel", "SalesOrders")',
                     type: 'POST',
                     data: { id: id, reason: reason, __RequestVerificationToken: token },
                     success: function(response) {

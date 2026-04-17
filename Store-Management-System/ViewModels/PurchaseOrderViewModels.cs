@@ -37,7 +37,7 @@ namespace Store_Management_System.ViewModels
         public string VoucherNumber { get; set; } = string.Empty;
 
         [Required(ErrorMessage = "Supplier is required")]
-        public int ConsignorId { get; set; }
+        public int SupplierId { get; set; }
 
         [Required(ErrorMessage = "Warehouse is required")]
         public int WarehouseId { get; set; }
@@ -109,7 +109,7 @@ namespace Store_Management_System.ViewModels
 
     // ==================== GOODS RECEIPT NOTE ====================
 
-    public class GoodsReceiptIndexViewModel
+    public class GoodsReceiptIndexViewModel2
     {
         public List<GoodsReceiptListViewModel> GoodsReceipts { get; set; } = new();
         public string SearchTerm { get; set; } = string.Empty;
@@ -118,7 +118,7 @@ namespace Store_Management_System.ViewModels
         public int PageSize { get; set; } = 10;
     }
 
-    public class GoodsReceiptListViewModel
+    public class GoodsReceiptListViewModel2
     {
         public int Id { get; set; }
         public string VoucherNumber { get; set; } = string.Empty;
@@ -129,7 +129,7 @@ namespace Store_Management_System.ViewModels
         public string Status { get; set; } = string.Empty;
     }
 
-    public class GoodsReceiptViewModel
+    public class GoodsReceiptViewModel2
     {
         public int Id { get; set; }
         public string VoucherNumber { get; set; } = string.Empty;
@@ -146,13 +146,12 @@ namespace Store_Management_System.ViewModels
 
         public string? Remarks { get; set; }
         public string Status { get; set; } = "Draft";
-
-        public List<GoodsReceiptLineViewModel> Lines { get; set; } = new();
+        public List<GoodsReceiptLineViewModel> Lines { get; set; } = new List<GoodsReceiptLineViewModel>();
 
         public SelectList PurchaseOrders { get; set; }
     }
 
-    public class GoodsReceiptLineViewModel
+    public class GoodsReceiptLineViewModel2
     {
         public int Id { get; set; }
         public int PurchaseOrderLineId { get; set; }
@@ -174,7 +173,7 @@ namespace Store_Management_System.ViewModels
 
     // ==================== RETURN TO SUPPLIER ====================
 
-    public class ReturnToSupplierViewModel
+    public class ReturnToSupplierViewModel2
     {
         public int Id { get; set; }
         public string ReturnNumber { get; set; } = string.Empty;
@@ -200,13 +199,13 @@ namespace Store_Management_System.ViewModels
         public string? Remarks { get; set; }
         public string Status { get; set; } = "Draft";
 
-        public List<ReturnToSupplierLineViewModel> Lines { get; set; } = new();
+        public List<ReturnToSupplierLineViewModel2> Lines { get; set; } = new();
 
         public SelectList Receipts { get; set; }
         public SelectList Warehouses { get; set; }
     }
 
-    public class ReturnToSupplierLineViewModel
+    public class ReturnToSupplierLineViewModel2
     {
         public int Id { get; set; }
         public int ReceiptLineId { get; set; }
@@ -224,7 +223,7 @@ namespace Store_Management_System.ViewModels
 
     // ==================== RETURN INDEX ====================
 
-    public class ReturnIndexViewModel
+    public class ReturnIndexViewModel2
     {
         public List<ReturnListViewModel> Returns { get; set; } = new();
         public string SearchTerm { get; set; } = string.Empty;
@@ -233,7 +232,7 @@ namespace Store_Management_System.ViewModels
         public int PageSize { get; set; } = 10;
     }
 
-    public class ReturnListViewModel
+    public class ReturnListViewModel2
     {
         public int Id { get; set; }
         public string VoucherNumber { get; set; } = string.Empty;

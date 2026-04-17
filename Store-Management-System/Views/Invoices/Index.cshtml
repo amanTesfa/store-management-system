@@ -1,0 +1,166 @@
+﻿@model InvoiceIndexViewModel
+
+@{
+    ViewData["Title"] = "Invoices";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Invoices</h1>
+        <span class="badge bg-dark text-white ms-2">Billing</span>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="align-middle" data-feather="plus"></i> New Invoice
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by Invoice # or Customer..." value="@Model.SearchTerm" />
+            </div>
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-select" asp-items="Model.Statuses"></select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" id="searchBtn">
+                    <i class="align-middle" data-feather="search"></i> Search
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Invoice #</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Due Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Invoices.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="align-middle" data-feather="file-text" style="width: 48px; height: 48px;"></i>
+                                <p class="mt-2 mb-0">No invoices found.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var inv in Model.Invoices)
+                        {
+                            <tr>
+                                <td><code>@inv.InvoiceNumber</code></td>
+                                <td><strong>@inv.CustomerName</strong></td>
+                                <td><span>@inv.InvoiceDate.ToString("yyyy-MM-dd")</span></td>
+                                <td><span>@(inv.DueDate?.ToString("yyyy-MM-dd") ?? "-")</span></td>
+                                <td><span>@(inv.TotalAmount.ToString("C"))</span></td>
+                                <td><span class="badge bg-@inv.StatusClass">@inv.Status</span></td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@inv.Id" class="btn btn-sm btn-info" title="View">
+                                            <i class="align-middle" data-feather="eye"></i>
+                                        </a>
+                                        @if (inv.Status == "Posted")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-success" onclick="markAsPaid(@inv.Id)" title="Mark as Paid">
+                                                <i class="align-middle" data-feather="dollar-sign"></i>
+                                            </button>
+                                        }
+                                        @if (inv.Status == "Draft" || inv.Status == "Posted")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="cancelInvoice(@inv.Id)" title="Cancel">
+                                                <i class="align-middle" data-feather="x-circle"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between">
+            <small>Page @Model.CurrentPage of @Model.TotalPages</small>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" disabled="@(Model.CurrentPage <= 1)">Previous</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" disabled="@(Model.CurrentPage >= Model.TotalPages)">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        var currentPage = @Model.CurrentPage;
+        var searchTerm = '@Model.SearchTerm';
+        var status = '@Model.Status';
+
+        function refreshPage() {
+            var url = '@Url.Action("Index", "Invoices")?searchTerm=' + encodeURIComponent(searchTerm) + '&status=' + encodeURIComponent(status) + '&page=' + currentPage;
+            window.location.href = url;
+        }
+
+        function previousPage() { if (currentPage > 1) { currentPage--; refreshPage(); } }
+        function nextPage() { currentPage++; refreshPage(); }
+
+        $('#searchBtn').on('click', function() { searchTerm = $('#searchInput').val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); });
+        $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); } });
+        $('#statusFilter').on('change', function() { status = $(this).val(); currentPage = 1; refreshPage(); });
+
+        function markAsPaid(id) {
+            if (confirm('Mark this invoice as paid?')) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("MarkAsPaid", "Invoices")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function cancelInvoice(id) {
+            var reason = prompt('Enter cancellation reason:');
+            if (reason) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Cancel", "Invoices")',
+                    type: 'POST',
+                    data: { id: id, reason: reason, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+    </script>
+}

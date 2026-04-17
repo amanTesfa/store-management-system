@@ -13,7 +13,7 @@ public partial class Voucher
 
     public int ActivityId { get; set; }
 
-    public int? ConsignorId { get; set; }
+   // public int? ConsignorId { get; set; }
 
     public int? ConsigneeId { get; set; }
 
@@ -70,8 +70,18 @@ public partial class Voucher
     public bool IsReturn { get; set; }
     public int? OriginalVoucherId { get; set; }
     public string? ReturnReason { get; set; }
-    //public DateTime? ApprovedAt { get; set; }
-   // public int? ApprovedBy { get; set; }
+    public int? SupplierId { get; set; }
+    public DateOnly? DeliveryDate { get; set; }
+    public string? ShippingAddress { get; set; }
+    public string? BillingAddress { get; set; }
+    public DateTime? ShippedDate { get; set; }
+    public decimal? ShippingCharge { get; set; }
+    public DateTime? CompletedDate { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public string? PaymentReference { get; set; }
+ 
+    // Navigation property
+    public virtual Supplier? Supplier { get; set; }
     public string? ApprovalComments { get; set; }
     public virtual Voucher? OriginalVoucher { get; set; }
     public virtual ICollection<Voucher> ReturnVouchers { get; set; } = new List<Voucher>();
@@ -87,7 +97,7 @@ public partial class Voucher
 
     public virtual Consignee? Consignee { get; set; }
 
-    public virtual Consignor? Consignor { get; set; }
+   // public virtual Consignor? Consignor { get; set; }
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 

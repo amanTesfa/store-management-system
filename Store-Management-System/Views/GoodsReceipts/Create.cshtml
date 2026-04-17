@@ -20,6 +20,8 @@
                     <h5 class="card-title mb-0">Receipt Information</h5>
                 </div>
                 <div class="card-body">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
                     <div class="mb-3">
                         <label asp-for="PurchaseOrderId" class="form-label">Purchase Order *</label>
                         <select asp-for="PurchaseOrderId" class="form-select" id="PurchaseOrderId" asp-items="Model.PurchaseOrders">
@@ -51,6 +53,11 @@
                     <div class="alert alert-info" id="poInfo">
                         Select a Purchase Order to see details.
                     </div>
+                    <hr />
+                    <div class="d-flex justify-content-between">
+                        <strong>Total Received Value:</strong>
+                        <strong id="totalValueDisplay">$0.00</strong>
+                    </div>
                 </div>
             </div>
         </div>
@@ -68,6 +75,7 @@
                             <th>Product</th>
                             <th>Ordered</th>
                             <th>Previously Received</th>
+                            <th>Available</th>
                             <th>To Receive</th>
                             <th>Unit Price</th>
                             <th>Accept?</th>
@@ -76,7 +84,7 @@
                     </thead>
                     <tbody id="itemsBody">
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
+                            <td colspan="8" class="text-center py-4 text-muted">
                                 Select a Purchase Order to load items.
                             </td>
                         </tr>
@@ -113,12 +121,12 @@
                         if (response.success) {
                             loadPOLines(response);
                         } else {
-                            $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load PO lines.</td></tr>');
+                            $('#itemsBody').html('<tr><td colspan="8" class="text-center py-4 text-danger">Failed to load PO lines.</td></tr>');
                         }
                     }
                 });
             } else {
-                $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-muted">Select a Purchase Order to load items.</td></tr>');
+                $('#itemsBody').html('<tr><td colspan="8" class="text-center py-4 text-muted">Select a Purchase Order to load items.</td></tr>');
                 $('#poInfo').html('Select a Purchase Order to see details.');
             }
         });
@@ -127,7 +135,7 @@
             var html = '';
             var index = 0;
 
-            $('#poInfo').html(`<strong>PO #${data.poNumber}</strong><br />Warehouse: ${data.warehouseId}`);
+            $('#poInfo').html(`<strong>PO #${data.poNumber}</strong><br />Warehouse ID: ${data.warehouseId}`);
 
             for (var i = 0; i < data.lines.length; i++) {
                 var line = data.lines[i];
@@ -138,54 +146,98 @@
                         <input type="hidden" name="Lines[${index}].PurchaseOrderLineId" value="${line.lineId}" />
                         <input type="hidden" name="Lines[${index}].ArticleId" value="${line.articleId}" />
                         <input type="hidden" name="Lines[${index}].UnitPrice" value="${line.unitPrice}" />
-                        <td><strong>${line.articleCode}</strong><br /><small>${line.articleName}</small></td>
+                        <input type="hidden" name="Lines[${index}].AvailableToReceive" value="${line.availableToReceive}" />
+                        <input type="hidden" name="Lines[${index}].PreviouslyReceived" value="${line.previouslyReceived}" />
+                        <td>
+                            <strong>${line.articleCode}</strong><br />
+                            <small class="text-muted">${line.articleName}</small>
+                        </td>
                         <td class="text-end">${line.orderedQuantity}</td>
                         <td class="text-end">${line.previouslyReceived}</td>
-                        <td><input type="number" name="Lines[${index}].QuantityToReceive" class="form-control receive-qty" style="width: 100px;" value="${line.availableToReceive}" max="${line.availableToReceive}" onchange="updateLandedCost(${index})" /></td>
-                        <td class="text-end">$${line.unitPrice.toFixed(2)}</td>
+                        <td class="text-end text-primary">${line.availableToReceive}</td>
+                        <td>
+                            <input type="number" name="Lines[${index}].QuantityToReceive"
+                                   class="form-control receive-qty" style="width: 100px;"
+                                   value="0" min="0" max="${line.availableToReceive}"
+                                   onchange="validateQuantity(this, ${line.availableToReceive}, ${index})" />
+                        </td>
+                        <td class="text-end">${line.unitPrice.toFixed(2)}</td>
                         <td class="text-center">
                             <div class="form-check">
-                                <input type="checkbox" name="Lines[${index}].IsAccepted" class="form-check-input accept-check" checked onchange="toggleAccept(${index})" />
+                                 <input type="checkbox" name="Lines[${index}].IsAccepted" class="form-check-input accept-check" value="true" checked onchange="toggleAccept(${index}, this)" />
+                                 <input type="hidden" name="Lines[${index}].IsAccepted" value="false" />
                             </div>
                         </td>
                         <td>
                             ${line.isBatchTracked ? `<input type="text" name="Lines[${index}].BatchNumber" class="form-control form-control-sm mb-1" placeholder="Batch #" />` : ''}
                             ${line.isSerialized ? `<input type="text" name="Lines[${index}].SerialNumber" class="form-control form-control-sm mb-1" placeholder="Serial #" />` : ''}
                             ${line.isExpiryTracked ? `<input type="date" name="Lines[${index}].ExpiryDate" class="form-control form-control-sm" />` : ''}
-                        </td>
-                    </tr>
+                         </td>
+                     </tr>
                 `;
                 index++;
             }
 
             if (index === 0) {
-                html = '<tr><td colspan="7" class="text-center py-4 text-muted">No items available to receive for this PO.</td></tr>';
+                html = '<tr><td colspan="8" class="text-center py-4 text-muted">No items available to receive for this PO.</td></tr>';
             }
 
             $('#itemsBody').html(html);
+            calculateTotalValue();
         }
 
-        function toggleAccept(index) {
-            var isChecked = $(`input[name="Lines[${index}].IsAccepted"]`).is(':checked');
+        function validateQuantity(input, maxAvailable, index) {
+            var value = parseFloat($(input).val()) || 0;
+            if (value > maxAvailable) {
+                $(input).val(maxAvailable);
+                showToast('warning', `Cannot receive more than available (${maxAvailable})`);
+            }
+            if (value < 0) $(input).val(0);
+            calculateTotalValue();
+        }
+
+        function toggleAccept(index, checkbox) {
+            var isChecked = $(checkbox).is(':checked');
+            var qtyInput = $(`input[name="Lines[${index}].QuantityToReceive"]`);
+
             if (!isChecked) {
-                $(`input[name="Lines[${index}].QuantityToReceive"]`).val(0).prop('disabled', true);
-                var reason = prompt('Reason for rejection:');
+                qtyInput.val(0).prop('disabled', true);
+                var reason = prompt('Please enter rejection reason:');
                 if (reason) {
                     $(`<input type="hidden" name="Lines[${index}].RejectionReason" value="${reason}" />`).appendTo(`tr[data-index="${index}"]`);
                 }
             } else {
-                var available = $(`tr[data-index="${index}"] .receive-qty`).attr('max');
-                $(`input[name="Lines[${index}].QuantityToReceive"]`).val(available).prop('disabled', false);
+                var maxAvailable = $(`input[name="Lines[${index}].AvailableToReceive"]`).val();
+                qtyInput.val(maxAvailable).prop('disabled', false);
             }
+            calculateTotalValue();
         }
 
-        function updateLandedCost(index) {
-            // Simple landed cost calculation - can be enhanced
-            var qty = parseFloat($(`input[name="Lines[${index}].QuantityToReceive"]`).val()) || 0;
-            var unitPrice = parseFloat($(`input[name="Lines[${index}].UnitPrice"]`).val()) || 0;
-            var landedCost = 0; // This will be distributed by backend
-            var finalCost = unitPrice + (landedCost / (qty || 1));
-            $(`input[name="Lines[${index}].FinalUnitCost"]`).val(finalCost.toFixed(2));
+        function calculateTotalValue() {
+            var total = 0;
+            $('.receipt-line').each(function() {
+                var qty = parseFloat($(this).find('.receive-qty').val()) || 0;
+                var price = parseFloat($(this).find('input[name$=".UnitPrice"]').val()) || 0;
+                var isAccepted = $(this).find('.accept-check').is(':checked');
+                if (isAccepted && qty > 0) {
+                    total += qty * price;
+                }
+            });
+            $('#totalValueDisplay').text('$' + total.toFixed(2));
         }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : type === 'warning' ? 'bg-warning' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+
+        $(document).ready(function() {
+            feather.replace();
+        });
     </script>
 }

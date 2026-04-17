@@ -1,4 +1,4 @@
-@model Store_Management_System.ViewModels.ReturnToSupplierViewModel
+@model ReturnToSupplierViewModel
 
 @{
     ViewData["Title"] = "Return Details";
@@ -6,7 +6,7 @@
 
 <div class="mb-3">
     <h1 class="h3 d-inline align-middle">Return Details</h1>
-    <span class="badge bg-dark text-white ms-2">RTV</span>
+    <span class="badge bg-dark text-white ms-2">@(Model?.ReturnNumber ?? "RTV")</span>
 </div>
 
 <div class="card">
@@ -14,26 +14,26 @@
         <h5 class="card-title mb-0">Return Information</h5>
     </div>
     <div class="card-body">
-        <div class="row gy-2">
+        <div class="row">
             <div class="col-md-3">
                 <label class="form-label">Return Number</label>
-                <p class="form-control-plaintext"><code>@Model.ReturnNumber</code></p>
+                <p class="form-control-plaintext"><code>@Model?.ReturnNumber</code></p>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Original GRN</label>
-                <p class="form-control-plaintext">@Model.OriginalReceiptNumber</p>
+                <p class="form-control-plaintext">@(Model?.OriginalReceiptNumber ?? "N/A")</p>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Supplier</label>
-                <p class="form-control-plaintext">@Model.SupplierName</p>
+                <p class="form-control-plaintext">@(Model?.SupplierName ?? "N/A")</p>
             </div>
             <div class="col-md-3">
                 <label class="form-label">Return Date</label>
-                <p class="form-control-plaintext">@Model.ReturnDate.ToString("yyyy-MM-dd")</p>
+                <p class="form-control-plaintext">@(Model?.ReturnDate.ToString("yyyy-MM-dd") ?? "N/A")</p>
             </div>
             <div class="col-12 mt-2">
                 <label class="form-label">Reason / Remarks</label>
-                <p class="form-control-plaintext">@Model.ReturnReason<br />@Model.Remarks</p>
+                <p class="form-control-plaintext">@Model?.ReturnReason<br />@Model?.Remarks</p>
             </div>
         </div>
     </div>
@@ -49,16 +49,16 @@
                 <thead class="table-light">
                     <tr>
                         <th>Product</th>
-                        <th>Quantity</th>
-                        <th>Unit Cost</th>
-                        <th>Total</th>
+                        <th class="text-end">Quantity</th>
+                        <th class="text-end">Unit Cost</th>
+                        <th class="text-end">Total</th>
                         <th>Reason</th>
                         <th>Batch</th>
                         <th>Serial</th>
                     </tr>
                 </thead>
                 <tbody>
-                    @if (Model.Lines == null || !Model.Lines.Any())
+                    @if (Model?.Lines == null || !Model.Lines.Any())
                     {
                         <tr>
                             <td colspan="7" class="text-center py-4 text-muted">No items on this return.</td>
@@ -72,7 +72,7 @@
                                 <td><strong>@line.ArticleCode</strong><br /><small>@line.ArticleName</small></td>
                                 <td class="text-end">@line.QuantityToReturn</td>
                                 <td class="text-end">@line.UnitCost.ToString("C")</td>
-                                <td class="text-end">@( (line.QuantityToReturn * line.UnitCost).ToString("C") )</td>
+                                <td class="text-end">@((line.QuantityToReturn * line.UnitCost).ToString("C"))</td>
                                 <td>@line.Reason</td>
                                 <td>@line.BatchNumber</td>
                                 <td>@line.SerialNumber</td>
@@ -90,9 +90,3 @@
         <i class="align-middle" data-feather="arrow-left"></i> Back to Returns
     </a>
 </div>
-
-@section Scripts {
-    <script>
-        feather.replace();
-    </script>
-}

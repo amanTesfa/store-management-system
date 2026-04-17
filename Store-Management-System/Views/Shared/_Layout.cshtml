@@ -187,7 +187,7 @@
 
 
                     <!-- Transactions Section -->
-                    <li class="sidebar-header">Transactions</li>
+                    <li class="sidebar-header">Purchase Transactions</li>
 
                     <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrders" ? "active" : "")">
                         <a class="sidebar-link" asp-controller="PurchaseOrders" asp-action="Index">
@@ -208,7 +208,29 @@
                             <span class="align-middle">Returns</span>
                         </a>
                     </li>
+                    <!-- Sales & Customers Section -->
+                    <li class="sidebar-header">Sales Transaction</li>
 
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "SalesOrders" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="SalesOrders" asp-action="Index">
+                            <i class="align-middle" data-feather="shopping-bag"></i>
+                            <span class="align-middle">Sales Orders</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Invoices" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="Invoices" asp-action="Index">
+                            <i class="align-middle" data-feather="file-text"></i>
+                            <span class="align-middle">Invoices</span>
+                        </a>
+                    </li>
+
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReturns" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="CustomerReturns" asp-action="Index">
+                            <i class="align-middle" data-feather="rotate-ccw"></i>
+                            <span class="align-middle">Customer Returns</span>
+                        </a>
+                    </li>
                   
                      
                     <!-- REPORTS -->

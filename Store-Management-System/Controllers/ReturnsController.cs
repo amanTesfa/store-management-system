@@ -24,7 +24,7 @@ namespace Store_Management_System.Controllers
             var voucher = await _context.Vouchers
                 .Include(v => v.VoucherLines)
                     .ThenInclude(l => l.Article)
-                .Include(v => v.Consignor)
+                .Include(v => v.Supplier)
                 .Include(v => v.OriginalVoucher)
                 .FirstOrDefaultAsync(v => v.Id == id && v.VoucherType == "RTV");
 
@@ -37,8 +37,8 @@ namespace Store_Management_System.Controllers
                 ReturnNumber = voucher.VoucherNumber,
                 OriginalReceiptId = voucher.OriginalVoucherId ?? 0,
                 OriginalReceiptNumber = voucher.OriginalVoucher?.VoucherNumber,
-                SupplierId = voucher.ConsignorId ?? 0,
-                SupplierName = voucher.Consignor?.ConsignorName,
+                SupplierId = voucher.SupplierId ?? 0,
+                SupplierName = voucher.Supplier?.Name,
                 WarehouseId = voucher.WarehouseId ?? 0,
                 ReturnDate = voucher.VoucherDate.ToDateTime(TimeOnly.MinValue),
                 ReturnReason = voucher.ReturnReason,
@@ -60,11 +60,11 @@ namespace Store_Management_System.Controllers
             return View(model);
         }
 
-        // GET: Returns
+        // GET: Returns/Index
         public async Task<IActionResult> Index(string searchTerm = "", int page = 1, int pageSize = 10)
         {
             var query = _context.Vouchers
-                .Include(v => v.Consignor)
+                .Include(v => v.Supplier)
                 .Include(v => v.OriginalVoucher)
                 .Where(v => v.VoucherType == "RTV")
                 .AsQueryable();
@@ -72,7 +72,7 @@ namespace Store_Management_System.Controllers
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(v => v.VoucherNumber.Contains(searchTerm) ||
-                                         (v.Consignor != null && v.Consignor.ConsignorName.Contains(searchTerm)));
+                                         (v.Supplier != null && v.Supplier.Name.Contains(searchTerm)));
             }
 
             var totalCount = await query.CountAsync();
@@ -88,7 +88,7 @@ namespace Store_Management_System.Controllers
                     VoucherNumber = v.VoucherNumber,
                     OriginalVoucherId = v.OriginalVoucherId,
                     OriginalVoucherNumber = v.OriginalVoucher != null ? v.OriginalVoucher.VoucherNumber : null,
-                    SupplierName = v.Consignor != null ? v.Consignor.ConsignorName : string.Empty,
+                    SupplierName = v.Supplier != null ? v.Supplier.Name : string.Empty,
                     VoucherDate = v.VoucherDate,
                     ItemCount = v.VoucherLines.Count,
                     Status = v.Status
@@ -107,7 +107,6 @@ namespace Store_Management_System.Controllers
             return View(model);
         }
 
-        // GET: Returns/Create
         [HttpGet]
         public async Task<IActionResult> Create(int? receiptId = null)
         {
@@ -120,10 +119,19 @@ namespace Store_Management_System.Controllers
             };
 
             await PopulateReceipts(model, receiptId);
+            await PopulateWarehouses(model);
             return View(model);
         }
 
-        // GET: Returns/GetReceiptLines
+        private async Task PopulateWarehouses(ReturnToSupplierViewModel model)
+        {
+            var warehouses = await _context.Warehouses
+                .Where(w => w.IsActive && !w.IsDeleted)
+                .Select(w => new SelectListItem { Value = w.Id.ToString(), Text = $"{w.WarehouseCode} - {w.WarehouseName}" })
+                .ToListAsync();
+            model.Warehouses = new SelectList(warehouses, "Value", "Text");
+        }
+        // GET: Returns/GetReceiptLines - Add GRN Number to response
         [HttpGet]
         public async Task<IActionResult> GetReceiptLines(int receiptId)
         {
@@ -161,7 +169,7 @@ namespace Store_Management_System.Controllers
                 expiryDate = l.ExpiryDate
             }).ToList();
 
-            return Json(new { success = true, lines = lines, supplierId = grn.ConsignorId });
+            return Json(new { success = true, lines = lines, supplierId = grn.SupplierId, grnNumber = grn.VoucherNumber });
         }
 
         // POST: Returns/Create
@@ -202,7 +210,7 @@ namespace Store_Management_System.Controllers
                         VoucherNumber = model.ReturnNumber,
                         VoucherType = "RTV", // Return to Vendor
                         ActivityId = 3, // Return activity
-                        ConsignorId = originalGrn.ConsignorId,
+                        SupplierId = originalGrn.SupplierId,
                         VoucherDate = DateOnly.FromDateTime(model.ReturnDate),
                         PostingDate = DateOnly.FromDateTime(model.ReturnDate),
                         IsReturn = true,
@@ -216,9 +224,11 @@ namespace Store_Management_System.Controllers
 
                     _context.Vouchers.Add(returnVoucher);
                     await _context.SaveChangesAsync();
-
                     foreach (var line in validLines)
                     {
+                        // Get the article to find its base unit
+                        var article = await _context.Articles.FindAsync(line.ArticleId);
+
                         // Create return line
                         var returnLine = new VoucherLine
                         {
@@ -226,6 +236,7 @@ namespace Store_Management_System.Controllers
                             ArticleId = line.ArticleId,
                             Quantity = line.QuantityToReturn,
                             UnitPrice = line.UnitCost,
+                            UnitId = article?.BaseUnitId ?? 1,  // Add this - required foreign key
                             LineTotal = line.TotalValue,
                             Reason = line.Reason,
                             BatchNumber = line.BatchNumber,
@@ -268,7 +279,6 @@ namespace Store_Management_System.Controllers
                         };
                         _context.StockMovements.Add(stockMovement);
                     }
-
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
 
@@ -307,12 +317,12 @@ namespace Store_Management_System.Controllers
         private async Task PopulateReceipts(ReturnToSupplierViewModel model, int? selectedReceiptId = null)
         {
             var receipts = await _context.Vouchers
-                .Include(v => v.Consignor)
+                .Include(v => v.Supplier)
                 .Where(v => v.VoucherType == "GRN" && v.Status == "Posted")
                 .Select(v => new SelectListItem
                 {
                     Value = v.Id.ToString(),
-                    Text = $"{v.VoucherNumber} - {v.Consignor.ConsignorName} - {v.VoucherDate}"
+                    Text = $"{v.VoucherNumber} - {v.Supplier.Name} - {v.VoucherDate}"
                 })
                 .ToListAsync();
 

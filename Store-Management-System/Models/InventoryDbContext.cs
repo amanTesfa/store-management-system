@@ -1088,12 +1088,12 @@ public partial class InventoryDbContext : DbContext
             entity.Property(e => e.ApprovalComments).HasMaxLength(500);
             entity.Property(e => e.ApprovedAt);
             entity.Property(e => e.ApprovedBy);
-
+            entity.Property(e => e.PaymentReference).HasMaxLength(100);
             // Add relationships
-            entity.HasOne(e => e.Consignor)
-   .WithMany(c => c.Vouchers)
-   .HasForeignKey(e => e.ConsignorId)
-   .OnDelete(DeleteBehavior.Restrict);
+            //         entity.HasOne(e => e.Consignor)
+            //.WithMany(c => c.Vouchers)
+            //.HasForeignKey(e => e.ConsignorId)
+            //.OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(e => e.Warehouse)
                 .WithMany()
                 .HasForeignKey(e => e.WarehouseId)
@@ -1112,7 +1112,7 @@ public partial class InventoryDbContext : DbContext
 
             entity.HasIndex(e => e.ConsigneeId, "IX_Vouchers_ConsigneeId");
 
-            entity.HasIndex(e => e.ConsignorId, "IX_Vouchers_ConsignorId");
+           // entity.HasIndex(e => e.ConsignorId, "IX_Vouchers_ConsignorId");
 
             entity.HasIndex(e => e.Status, "IX_Vouchers_Status");
 
@@ -1143,14 +1143,17 @@ public partial class InventoryDbContext : DbContext
                 .HasForeignKey(d => d.ActivityId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Vouchers_Activity");
-
+            entity.HasOne(e => e.Supplier)
+     .WithMany(s => s.Vouchers)
+     .HasForeignKey(e => e.SupplierId)
+     .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.Consignee).WithMany(p => p.Vouchers)
                 .HasForeignKey(d => d.ConsigneeId)
                 .HasConstraintName("FK_Vouchers_Consignee");
 
-            entity.HasOne(d => d.Consignor).WithMany(p => p.Vouchers)
-                .HasForeignKey(d => d.ConsignorId)
-                .HasConstraintName("FK_Vouchers_Consignor");
+            //entity.HasOne(d => d.Consignor).WithMany(p => p.Vouchers)
+            //    .HasForeignKey(d => d.ConsignorId)
+            //    .HasConstraintName("FK_Vouchers_Consignor");
         });
 
         modelBuilder.Entity<VoucherCharge>(entity =>
@@ -1207,7 +1210,8 @@ public partial class InventoryDbContext : DbContext
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.WithholdingAmount).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.WithholdingTaxCode).HasMaxLength(20);
-
+            entity.Property(e => e.RejectionReason).HasMaxLength(500);
+            entity.Property(e => e.IsAccepted).HasDefaultValue(true);
             entity.HasOne(d => d.Article).WithMany(p => p.VoucherLines)
                 .HasForeignKey(d => d.ArticleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)

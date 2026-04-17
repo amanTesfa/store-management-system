@@ -1,12 +1,12 @@
 ﻿@model PurchaseOrderViewModel
 
 @{
-    ViewData["Title"] = Model.Id > 0 ? "Edit Purchase Order" : "New Purchase Order";
+    ViewData["Title"] = "Edit Purchase Order";
 }
 
 <div class="mb-3">
-    <h1 class="h3 d-inline align-middle">@(Model.Id > 0 ? "Edit" : "New") Purchase Order</h1>
-    <span class="badge bg-dark text-white ms-2">@Model.Status</span>
+    <h1 class="h3 d-inline align-middle">Edit Purchase Order</h1>
+    <span class="badge bg-dark text-white ms-2">@Model.VoucherNumber</span>
 </div>
 
 <form id="mainForm" method="post">
@@ -149,7 +149,8 @@
                         {
                             var line = Model.Lines[i];
                             <tr class="line-item" data-index="@i">
-                                <td>
+                                <td><span>
+                               
                                     <select name="Lines[@i].ArticleId" class="form-select product-select" data-index="@i" onchange="updateLineTotal(@i)">
                                         <option value="">-- Select Product --</option>
                                         @foreach (var product in Model.Products)
@@ -159,23 +160,29 @@
                                             </option>
                                         }
                                     </select>
+                                 </span>
+                                 </td>
+                                <td><span>
+                                    <input type="number" name="Lines[@i].Quantity" class="form-control quantity" step="0.01" value="@line.Quantity" onchange="updateLineTotal(@i)" />
+                                 </span><td/>
+                                <td><span>
+                               
+                                    <input type="number" name="Lines[@i].UnitPrice" class="form-control unit-price" step="0.01" value="@line.UnitPrice" onchange="updateLineTotal(@i)" />
+                                 </span>
                                 </td>
                                 <td>
-                                    <input type="number" name="Lines[@i].Quantity" class="form-control quantity" step="0.01" value="@(line.Quantity > 0 ? line.Quantity.ToString() : "")" onchange="updateLineTotal(@i)" />
-                                </td>
-                                <td>
-                                    <input type="number" name="Lines[@i].UnitPrice" class="form-control unit-price" step="0.01" value="@(line.UnitPrice > 0 ? line.UnitPrice.ToString() : "")" onchange="updateLineTotal(@i)" />
-                                </td>
-                                <td>
+                                <span>
                                     <input type="number" name="Lines[@i].DiscountPercent" class="form-control discount" step="0.01" value="@line.DiscountPercent" onchange="updateLineTotal(@i)" />
-                                </td>
-                                <td class="line-total-@i text-end fw-bold">$0.00</td>
+                                 </span>
+                                 </td>
+                                <td class="line-total-@i text-end fw-bold"><span>$0.00</span></td>
                                 <td class="text-center">
+                                <span>
                                     <button type="button" class="btn btn-sm btn-danger" onclick="removeLine(this)">
                                         <i class="align-middle" data-feather="x"></i>
                                     </button>
-                                </td>
-                            </tr>
+                                 </span>
+                             </tr>
                         }
                     </tbody>
                 </table>
@@ -191,7 +198,7 @@
             @if (Model.Status == "Draft")
             {
                 <button type="submit" class="btn btn-primary">
-                    <i class="align-middle" data-feather="save"></i> Save Draft
+                    <i class="align-middle" data-feather="save"></i> Save Changes
                 </button>
             }
         </div>
@@ -199,9 +206,7 @@
 </form>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
 
     <script>
         var lineCounter = @Model.Lines.Count;
@@ -215,26 +220,26 @@
                             <option value="">-- Select Product --</option>
                             @foreach (var product in Model.Products)
                             {
-                                    <option value="@product.Value">@product.Text</option>
+                                <option value="@product.Value">@product.Text</option>
                             }
                         </select>
-                     </td>
+                      </span>
                     <td>
                         <input type="number" name="Lines[${index}].Quantity" class="form-control quantity" step="0.01" onchange="updateLineTotal(${index})" />
-                     </td>
+                      </span>
                     <td>
                         <input type="number" name="Lines[${index}].UnitPrice" class="form-control unit-price" step="0.01" onchange="updateLineTotal(${index})" />
-                     </td>
+                      </span>
                     <td>
                         <input type="number" name="Lines[${index}].DiscountPercent" class="form-control discount" step="0.01" onchange="updateLineTotal(${index})" />
-                     </td>
-                    <td class="line-total-${index} text-end fw-bold">$0.00</td>
+                      </span>
+                    <td class="line-total-${index} text-end fw-bold">$0.00</span>
                     <td class="text-center">
                         <button type="button" class="btn btn-sm btn-danger" onclick="removeLine(this)">
                             <i class="align-middle" data-feather="x"></i>
                         </button>
-                    </td>
-                </tr>
+                      </span>
+                 </tr>
             `;
             $('#itemsBody').append(newRow);
             lineCounter++;
@@ -261,13 +266,13 @@
                 var total = parseFloat($(this).find('.line-total').text().replace('$', '')) || 0;
                 subtotal += total;
             });
-
+            
             var shipping = parseFloat($('#ShippingCost').val()) || 0;
             var handling = parseFloat($('#HandlingCost').val()) || 0;
             var insurance = parseFloat($('#InsuranceCost').val()) || 0;
             var other = parseFloat($('#OtherCost').val()) || 0;
             var charges = shipping + handling + insurance + other;
-
+            
             $('#subtotalDisplay').text('$' + subtotal.toFixed(2));
             $('#chargesDisplay').text('$' + charges.toFixed(2));
             $('#grandTotalDisplay').text('$' + (subtotal + charges).toFixed(2));
@@ -276,10 +281,10 @@
         $(document).ready(function() {
             @for (int i = 0; i < Model.Lines.Count; i++)
             {
-                    <text>updateLineTotal(@i);</text>
+                <text>updateLineTotal(@i);</text>
             }
             updateSummary();
-
+            
             $('#ShippingCost, #HandlingCost, #InsuranceCost, #OtherCost').on('input', function() {
                 updateSummary();
             });

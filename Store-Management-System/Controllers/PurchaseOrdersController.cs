@@ -22,14 +22,14 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Index(string searchTerm = "", string status = "", int page = 1, int pageSize = 10)
         {
             var query = _context.Vouchers
-                .Include(v => v.Consignor)
+                .Include(v => v.Supplier)
                 .Where(v => v.VoucherType == "PO" && !v.IsReturn)
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(v => v.VoucherNumber.Contains(searchTerm) ||
-                                         (v.Consignor != null && v.Consignor.ConsignorName.Contains(searchTerm)));
+                                         (v.Supplier != null && v.Supplier.Name.Contains(searchTerm)));
             }
 
             if (!string.IsNullOrWhiteSpace(status))
@@ -48,7 +48,7 @@ namespace Store_Management_System.Controllers
                 {
                     Id = v.Id,
                     VoucherNumber = v.VoucherNumber,
-                    SupplierName = v.Consignor != null ? v.Consignor.ConsignorName : "",
+                    SupplierName = v.Supplier != null ? v.Supplier.Name : "",
                     VoucherDate = v.VoucherDate,
                     ExpectedDate = v.ExpectedDate,
                     TotalAmount = v.TotalAmount,
@@ -140,7 +140,7 @@ namespace Store_Management_System.Controllers
                     VoucherNumber = model.VoucherNumber,
                     VoucherType = "PO",
                     ActivityId = 1, // Purchase activity ID
-                    ConsignorId = model.ConsignorId,
+                    SupplierId = model.SupplierId,
                     VoucherDate = DateOnly.FromDateTime(DateTime.UtcNow),
                     PostingDate = DateOnly.FromDateTime(DateTime.UtcNow),
                     ExpectedDate = model.ExpectedDate.HasValue ? DateOnly.FromDateTime(model.ExpectedDate.Value) : null,
@@ -166,6 +166,8 @@ namespace Store_Management_System.Controllers
                 // Add lines
                 foreach (var line in validLines)
                 {
+                    var article = await _context.Articles.FindAsync(line.ArticleId);
+
                     var voucherLine = new VoucherLine
                     {
                         VoucherId = voucher.Id,
@@ -174,7 +176,9 @@ namespace Store_Management_System.Controllers
                         UnitPrice = line.UnitPrice,
                         DiscountPercent = line.DiscountPercent,
                         LineTotal = line.LineTotal,
-                        Description = line.Description
+                        Description = line.Description,
+                         UnitId = article?.BaseUnitId ?? 1,
+                          WarehouseId = model.WarehouseId
                     };
                     _context.VoucherLines.Add(voucherLine);
                 }
@@ -207,7 +211,7 @@ namespace Store_Management_System.Controllers
             {
                 Id = voucher.Id,
                 VoucherNumber = voucher.VoucherNumber,
-                ConsignorId = voucher.ConsignorId ?? 0,
+                SupplierId = voucher.SupplierId ?? 0,
                 WarehouseId = voucher.WarehouseId ?? 0,
                 ExpectedDate = voucher.ExpectedDate.HasValue ? voucher.ExpectedDate.Value.ToDateTime(TimeOnly.MinValue) : (DateTime?)null,
                 Remarks = voucher.Remarks,
@@ -266,7 +270,7 @@ namespace Store_Management_System.Controllers
             if (ModelState.IsValid)
             {
                 // Update header
-                voucher.ConsignorId = model.ConsignorId;
+                voucher.SupplierId = model.SupplierId;
                 voucher.WarehouseId = model.WarehouseId;
                 voucher.ExpectedDate = model.ExpectedDate.HasValue ? DateOnly.FromDateTime(model.ExpectedDate.Value) : null;
                 voucher.Remarks = model.Remarks;
@@ -287,6 +291,8 @@ namespace Store_Management_System.Controllers
                 // Add new lines
                 foreach (var line in validLines)
                 {
+                    var article = await _context.Articles.FindAsync(line.ArticleId);
+
                     var voucherLine = new VoucherLine
                     {
                         VoucherId = voucher.Id,
@@ -295,7 +301,9 @@ namespace Store_Management_System.Controllers
                         UnitPrice = line.UnitPrice,
                         DiscountPercent = line.DiscountPercent,
                         LineTotal = line.LineTotal,
-                        Description = line.Description
+                        Description = line.Description,
+                        UnitId = article?.BaseUnitId ?? 1,
+                        WarehouseId = model.WarehouseId
                     };
                     _context.VoucherLines.Add(voucherLine);
                 }
@@ -386,7 +394,7 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Details(int id)
         {
             var voucher = await _context.Vouchers
-                .Include(v => v.Consignor)
+                .Include(v => v.Supplier)
                 .Include(v => v.VoucherLines)
                     .ThenInclude(l => l.Article)
                 .FirstOrDefaultAsync(v => v.Id == id && v.VoucherType == "PO");
@@ -418,10 +426,11 @@ namespace Store_Management_System.Controllers
         private async Task PopulateDropdowns(PurchaseOrderViewModel model)
         {
             var suppliers = await _context.Suppliers
-                .Where(s => s.IsActive && !s.IsDeleted)
-                .Select(s => new SelectListItem { Value = s.Id.ToString(), Text = s.Name })
-                .ToListAsync();
-            model.Suppliers = new SelectList(suppliers, "Value", "Text", model.ConsignorId);
+       .Where(s => s.IsActive && !s.IsDeleted)
+       .Select(s => new SelectListItem { Value = s.Id.ToString(), Text = s.Name })
+       .ToListAsync();
+
+            model.Suppliers = new SelectList(suppliers, "Value", "Text", model.SupplierId);
 
             var warehouses = await _context.Warehouses
                 .Where(w => w.IsActive && !w.IsDeleted)

@@ -22,14 +22,16 @@ namespace Store_Management_System.Controllers
         public async Task<IActionResult> Index(string searchTerm = "", int page = 1, int pageSize = 10)
         {
             var query = _context.Vouchers
-                .Include(v => v.Consignor)
+                .Include(v => v.Supplier)
+                .Include(v => v.TransactionReferenceSourceVouchers)
+                .ThenInclude(r => r.TargetVoucher)
                 .Where(v => v.VoucherType == "GRN")
                 .AsQueryable();
 
             if (!string.IsNullOrWhiteSpace(searchTerm))
             {
                 query = query.Where(v => v.VoucherNumber.Contains(searchTerm) ||
-                                         (v.Consignor != null && v.Consignor.ConsignorName.Contains(searchTerm)));
+                                         (v.Supplier != null && v.Supplier.Name.Contains(searchTerm)));
             }
 
             var totalCount = await query.CountAsync();
@@ -43,7 +45,11 @@ namespace Store_Management_System.Controllers
                 {
                     Id = v.Id,
                     VoucherNumber = v.VoucherNumber,
-                    SupplierName = v.Consignor != null ? v.Consignor.ConsignorName : "",
+                    PONumber = _context.TransactionReferences
+                        .Where(r => r.TargetVoucherId == v.Id)
+                        .Select(r => r.SourceVoucher.VoucherNumber)
+                        .FirstOrDefault() ?? "N/A",
+                    SupplierName = v.Supplier != null ? v.Supplier.Name : "N/A",
                     ReceiptDate = v.VoucherDate,
                     ItemCount = v.VoucherLines.Count,
                     Status = v.Status
@@ -61,7 +67,6 @@ namespace Store_Management_System.Controllers
 
             return View(model);
         }
-
         // GET: GoodsReceipts/Create
         [HttpGet]
         public async Task<IActionResult> Create(int? poId = null)
@@ -77,7 +82,32 @@ namespace Store_Management_System.Controllers
             await PopulatePurchaseOrders(model, poId);
             return View(model);
         }
+        // GET: GoodsReceipts/Details/5
+        [HttpGet]
+        public async Task<IActionResult> Details(int id)
+        {
+            var grn = await _context.Vouchers
+                .Include(v => v.Supplier)
+                .Include(v => v.VoucherLines)
+                    .ThenInclude(l => l.Article)
+                .Include(v => v.TransactionReferenceSourceVouchers)
+                .FirstOrDefaultAsync(v => v.Id == id && v.VoucherType == "GRN");
 
+            if (grn == null)
+            {
+                return NotFound();
+            }
+
+            // Get the associated PO number
+            var poNumber = await _context.TransactionReferences
+                .Where(r => r.TargetVoucherId == grn.Id)
+                .Select(r => r.SourceVoucher.VoucherNumber)
+                .FirstOrDefaultAsync();
+
+            ViewBag.PONumber = poNumber ?? "N/A";
+
+            return View(grn);
+        }
         // POST: GoodsReceipts/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -85,10 +115,41 @@ namespace Store_Management_System.Controllers
         {
             ModelState.Remove("PurchaseOrders");
 
+            // Validate at least one item to receive
+            var itemsToReceive = model.Lines?.Where(l => l.QuantityToReceive > 0 && l.IsAccepted).ToList();
+            if (itemsToReceive == null || !itemsToReceive.Any())
+            {
+                ModelState.AddModelError("", "Please select at least one item to receive.");
+                await PopulatePurchaseOrders(model);
+                return View(model);
+            }
+
+            // Validate no over-receiving
+            foreach (var line in itemsToReceive)
+            {
+                if (line.QuantityToReceive > line.AvailableToReceive)
+                {
+                    ModelState.AddModelError("", $"Cannot receive more than ordered for {line.ArticleName}. Ordered: {line.AvailableToReceive + line.PreviouslyReceived}, Already received: {line.PreviouslyReceived}, Available: {line.AvailableToReceive}");
+                }
+            }
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState.Values
+                    .SelectMany(v => v.Errors)
+                    .Select(e => e.ErrorMessage)
+                    .ToList();
+
+                var errorMessage = string.Join(", ", errors);
+                System.Diagnostics.Debug.WriteLine($"ModelState Invalid: {errorMessage}");
+
+                await PopulatePurchaseOrders(model);
+                return View(model);
+            }
             if (ModelState.IsValid)
             {
                 var po = await _context.Vouchers
                     .Include(v => v.VoucherLines)
+                    .ThenInclude(l => l.Article)
                     .FirstOrDefaultAsync(v => v.Id == model.PurchaseOrderId && v.VoucherType == "PO");
 
                 if (po == null)
@@ -105,8 +166,8 @@ namespace Store_Management_System.Controllers
                     {
                         VoucherNumber = model.VoucherNumber,
                         VoucherType = "GRN",
-                        ActivityId = 2, // Goods Receipt activity
-                        ConsignorId = po.ConsignorId,
+                        ActivityId = 2,
+                        SupplierId = po.SupplierId,
                         VoucherDate = DateOnly.FromDateTime(model.ReceiptDate),
                         PostingDate = DateOnly.FromDateTime(model.ReceiptDate),
                         Status = "Posted",
@@ -123,94 +184,71 @@ namespace Store_Management_System.Controllers
                     {
                         SourceVoucherId = po.Id,
                         TargetVoucherId = grn.Id,
-                        ReferenceType = "PO→GRN"
+                        ReferenceType = "PO→GRN",
+                        ReferenceDate = DateTime.UtcNow
                     };
                     _context.TransactionReferences.Add(transactionRef);
 
                     decimal totalLandedCost = 0;
                     var receivedLines = new List<(VoucherLine poLine, GoodsReceiptLineViewModel receiptLine)>();
 
-                    foreach (var line in model.Lines.Where(l => l.QuantityToReceive > 0 && l.IsAccepted))
+                    foreach (var line in itemsToReceive)
                     {
                         var poLine = po.VoucherLines.FirstOrDefault(l => l.Id == line.PurchaseOrderLineId);
                         if (poLine == null) continue;
 
+                        // Calculate landed cost for this line
+                        decimal lineLandedCost = 0;
+                        decimal finalUnitCost = line.UnitPrice;
+
+                        if (po.TotalLandedCost > 0 && po.LandedCostDistributionMethod != null)
+                        {
+                            // Will be distributed after all lines are processed
+                            lineLandedCost = 0;
+                            finalUnitCost = line.UnitPrice;
+                        }
+
                         // Update received quantity on PO line
                         poLine.ReceivedQuantity = (poLine.ReceivedQuantity ?? 0) + line.QuantityToReceive;
-                        totalLandedCost += line.LandedCostAmount;
+                        var article = await _context.Articles.FindAsync(line.ArticleId);
 
                         // Create GRN line
                         var grnLine = new VoucherLine
                         {
                             VoucherId = grn.Id,
+                            WarehouseId = po.WarehouseId ?? 1,
                             ArticleId = line.ArticleId,
                             Quantity = line.QuantityToReceive,
                             UnitPrice = line.UnitPrice,
-                            LandedCostAmount = line.LandedCostAmount,
-                            FinalUnitCost = line.FinalUnitCost,
+                            UnitId = article?.BaseUnitId ?? 1,
+                            LandedCostAmount = lineLandedCost,
+                            FinalUnitCost = finalUnitCost,
                             BatchNumber = line.BatchNumber,
                             SerialNumber = line.SerialNumber,
-                            ExpiryDate = line.ExpiryDate.HasValue ? line.ExpiryDate.Value: null,
-                            LineTotal = line.QuantityToReceive * line.FinalUnitCost
+                            ExpiryDate = line.ExpiryDate.HasValue ? DateOnly.FromDateTime(line.ExpiryDate.Value) : null,
+                            LineTotal = line.QuantityToReceive * finalUnitCost,
+                            IsAccepted = line.IsAccepted,
+                            RejectionReason = line.RejectionReason
                         };
                         _context.VoucherLines.Add(grnLine);
-                        await _context.SaveChangesAsync();
 
                         receivedLines.Add((poLine, line));
+                        totalLandedCost += lineLandedCost;
 
-                        // Update CurrentStock
-                        var currentStock = await _context.CurrentStocks
-                            .FirstOrDefaultAsync(cs => cs.ArticleId == line.ArticleId &&
-                                                       cs.WarehouseId == po.WarehouseId &&
-                                                       cs.BatchNumber == line.BatchNumber &&
-                                                       cs.SerialNumber == line.SerialNumber);
-
-                        if (currentStock != null)
+                        // Only update stock if accepted
+                        if (line.IsAccepted)
                         {
-                            currentStock.Quantity += line.QuantityToReceive;
-                            currentStock.LastUpdated = DateTime.UtcNow;
+                            await UpdateStock(po, line, grn.VoucherNumber);
                         }
-                        else
-                        {
-                            currentStock = new CurrentStock
-                            {
-                                ArticleId = line.ArticleId,
-                                WarehouseId = po.WarehouseId ?? 1,
-                                Quantity = line.QuantityToReceive,
-                                ReservedQuantity = 0,
-                                BatchNumber = line.BatchNumber,
-                                SerialNumber = line.SerialNumber,
-                                ExpiryDate = line.ExpiryDate.HasValue ? line.ExpiryDate.Value : null,
-                                LastUpdated = DateTime.UtcNow
-                            };
-                            _context.CurrentStocks.Add(currentStock);
-                        }
-
-                        // Create StockMovement
-                        var stockMovement = new StockMovement
-                        {
-                            MovementNumber = $"GRN-{grn.VoucherNumber}",
-                            ArticleId = line.ArticleId,
-                            WarehouseId = po.WarehouseId ?? 1,
-                            MovementType = "In",
-                            ActivityType = "Goods Receipt",
-                            Quantity = line.QuantityToReceive,
-                            PreviousStock = (currentStock?.Quantity ?? 0) - line.QuantityToReceive,
-                            NewStock = currentStock?.Quantity ?? line.QuantityToReceive,
-                            UnitCost = line.FinalUnitCost,
-                            TotalCost = line.QuantityToReceive * line.FinalUnitCost,
-                            BatchNumber = line.BatchNumber,
-                            SerialNumber = line.SerialNumber,
-                            ExpiryDate = line.ExpiryDate.HasValue ? line.ExpiryDate.Value : null,
-                            MovementDate = DateTime.UtcNow,
-                            CreatedBy = GetCurrentUserId(),
-                            ReferenceNumber = po.VoucherNumber,
-                            VoucherId = grn.Id
-                        };
-                        _context.StockMovements.Add(stockMovement);
                     }
 
-                    // Update PO status based on received quantities
+                    // Distribute landed cost if any
+                    if (po.TotalLandedCost > 0 && receivedLines.Any())
+                    {
+                        await DistributeLandedCost(po, receivedLines, po.TotalLandedCost ?? 0, grn.Id);
+                    }
+
+                    // Update PO status
                     var allLines = po.VoucherLines.ToList();
                     var totalOrdered = allLines.Sum(l => l.Quantity);
                     var totalReceived = allLines.Sum(l => l.ReceivedQuantity ?? 0);
@@ -224,12 +262,6 @@ namespace Store_Management_System.Controllers
                     {
                         po.Status = "PartiallyReceived";
                         po.PartiallyReceivedAt = DateTime.UtcNow;
-                    }
-
-                    // Calculate and distribute landed cost if any
-                    if (totalLandedCost > 0 && po.LandedCostDistributionMethod != null)
-                    {
-                        await DistributeLandedCost(po, receivedLines, totalLandedCost);
                     }
 
                     grn.SubTotal = receivedLines.Sum(l => l.receiptLine.QuantityToReceive * l.receiptLine.UnitPrice);
@@ -252,9 +284,62 @@ namespace Store_Management_System.Controllers
             return View(model);
         }
 
-        private async Task DistributeLandedCost(Voucher po, List<(VoucherLine poLine, GoodsReceiptLineViewModel receiptLine)> receivedLines, decimal totalLandedCost)
+        private async Task UpdateStock(Voucher po, GoodsReceiptLineViewModel line, string grnNumber)
+        {
+            var currentStock = await _context.CurrentStocks
+                .FirstOrDefaultAsync(cs => cs.ArticleId == line.ArticleId &&
+                                           cs.WarehouseId == po.WarehouseId &&
+                                           cs.BatchNumber == line.BatchNumber &&
+                                           cs.SerialNumber == line.SerialNumber);
+
+            if (currentStock != null)
+            {
+                currentStock.Quantity += line.QuantityToReceive;
+                currentStock.LastUpdated = DateTime.UtcNow;
+            }
+            else
+            {
+                currentStock = new CurrentStock
+                {
+                    ArticleId = line.ArticleId,
+                    WarehouseId = po.WarehouseId ?? 1,
+                    Quantity = line.QuantityToReceive,
+                    ReservedQuantity = 0,
+                    BatchNumber = line.BatchNumber,
+                    SerialNumber = line.SerialNumber,
+                    ExpiryDate = line.ExpiryDate.HasValue ? DateOnly.FromDateTime(line.ExpiryDate.Value) : null,
+                    LastUpdated = DateTime.UtcNow
+                };
+                _context.CurrentStocks.Add(currentStock);
+            }
+
+            // Create StockMovement
+            var stockMovement = new StockMovement
+            {
+                MovementNumber = $"GRN-{grnNumber}",
+                ArticleId = line.ArticleId,
+                WarehouseId = po.WarehouseId ?? 1,
+                MovementType = "In",
+                ActivityType = "Goods Receipt",
+                Quantity = line.QuantityToReceive,
+                PreviousStock = (currentStock?.Quantity ?? 0) - line.QuantityToReceive,
+                NewStock = currentStock?.Quantity ?? line.QuantityToReceive,
+                UnitCost = line.FinalUnitCost,
+                TotalCost = line.QuantityToReceive * line.FinalUnitCost,
+                BatchNumber = line.BatchNumber,
+                SerialNumber = line.SerialNumber,
+                ExpiryDate = line.ExpiryDate.HasValue ? DateOnly.FromDateTime(line.ExpiryDate.Value) : null,
+                MovementDate = DateTime.UtcNow,
+                CreatedBy = GetCurrentUserId(),
+                ReferenceNumber = po.VoucherNumber
+            };
+            _context.StockMovements.Add(stockMovement);
+        }
+
+        private async Task DistributeLandedCost(Voucher po, List<(VoucherLine poLine, GoodsReceiptLineViewModel receiptLine)> receivedLines, decimal totalLandedCost, int grnId)
         {
             decimal totalBaseValue = 0;
+            var grnLines = await _context.VoucherLines.Where(l => l.VoucherId == grnId).ToListAsync();
 
             switch (po.LandedCostDistributionMethod)
             {
@@ -264,8 +349,13 @@ namespace Store_Management_System.Controllers
                     {
                         var lineValue = line.receiptLine.QuantityToReceive * line.receiptLine.UnitPrice;
                         var allocatedCost = totalBaseValue > 0 ? (lineValue / totalBaseValue) * totalLandedCost : 0;
-                        line.receiptLine.LandedCostAmount = allocatedCost;
-                        line.receiptLine.FinalUnitCost = line.receiptLine.UnitPrice + (allocatedCost / line.receiptLine.QuantityToReceive);
+                        var grnLine = grnLines.FirstOrDefault(l => l.ArticleId == line.receiptLine.ArticleId);
+                        if (grnLine != null)
+                        {
+                            grnLine.LandedCostAmount = allocatedCost;
+                            grnLine.FinalUnitCost = line.receiptLine.UnitPrice + (allocatedCost / line.receiptLine.QuantityToReceive);
+                            grnLine.LineTotal = line.receiptLine.QuantityToReceive * (grnLine.FinalUnitCost ?? line.receiptLine.UnitPrice);
+                        }
                     }
                     break;
 
@@ -275,8 +365,13 @@ namespace Store_Management_System.Controllers
                     foreach (var line in receivedLines)
                     {
                         var allocatedCost = line.receiptLine.QuantityToReceive * costPerUnit;
-                        line.receiptLine.LandedCostAmount = allocatedCost;
-                        line.receiptLine.FinalUnitCost = line.receiptLine.UnitPrice + costPerUnit;
+                        var grnLine = grnLines.FirstOrDefault(l => l.ArticleId == line.receiptLine.ArticleId);
+                        if (grnLine != null)
+                        {
+                            grnLine.LandedCostAmount = allocatedCost;
+                            grnLine.FinalUnitCost = line.receiptLine.UnitPrice + costPerUnit;
+                            grnLine.LineTotal = line.receiptLine.QuantityToReceive * (grnLine.FinalUnitCost ?? line.receiptLine.UnitPrice);
+                        }
                     }
                     break;
             }
@@ -309,7 +404,7 @@ namespace Store_Management_System.Controllers
                 isExpiryTracked = l.Article.IsExpiryTracked
             }).ToList();
 
-            return Json(new { success = true, lines = lines, warehouseId = po.WarehouseId });
+            return Json(new { success = true, lines = lines, poNumber = po.VoucherNumber, warehouseId = po.WarehouseId });
         }
 
         private async Task<string> GenerateVoucherNumber(string prefix)
@@ -333,12 +428,12 @@ namespace Store_Management_System.Controllers
         private async Task PopulatePurchaseOrders(GoodsReceiptViewModel model, int? selectedPoId = null)
         {
             var pos = await _context.Vouchers
-                .Include(v => v.Consignor)
+                .Include(v => v.Supplier)
                 .Where(v => v.VoucherType == "PO" && v.Status != "FullyReceived" && v.Status != "Cancelled")
                 .Select(v => new SelectListItem
                 {
                     Value = v.Id.ToString(),
-                    Text = $"{v.VoucherNumber} - {v.Consignor.ConsignorName} - {v.VoucherDate}"
+                    Text = $"{v.VoucherNumber} - {v.Supplier.Name} - {v.VoucherDate}"
                 })
                 .ToListAsync();
 

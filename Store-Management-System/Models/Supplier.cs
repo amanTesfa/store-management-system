@@ -34,7 +34,7 @@ public partial class Supplier
     public int? CreatedBy { get; set; }
 
     public int? UpdatedBy { get; set; }
-
+    public virtual ICollection<Voucher> Vouchers { get; set; } = new List<Voucher>();
     public virtual ICollection<Article> Articles { get; set; } = new List<Article>();
 
     public virtual ICollection<Product> Products { get; set; } = new List<Product>();

@@ -58,15 +58,17 @@ public partial class VoucherLine
     public string? AllocatedChargesJson { get; set; }
 
     public decimal WithholdingAmount { get; set; }
-
+    public int? OriginalVoucherLineId { get; set; }
     public string? WithholdingTaxCode { get; set; }
     public decimal? LandedCostPercentage { get; set; }
     public decimal? LandedCostAmount { get; set; }
     public decimal? FinalUnitCost { get; set; }
     public string? Reason { get; set; }
-   /// <summary>
-   /// public decimal? ReceivedQuantity { get; set; }  // For PO tracking
-   /// </summary>
+    public bool IsAccepted { get; set; } = true;
+    public string? RejectionReason { get; set; }
+    /// <summary>
+    /// public decimal? ReceivedQuantity { get; set; }  // For PO tracking
+    /// </summary>
     public virtual Article Article { get; set; } = null!;
 
     public virtual ICollection<ChargeAllocation> ChargeAllocations { get; set; } = new List<ChargeAllocation>();

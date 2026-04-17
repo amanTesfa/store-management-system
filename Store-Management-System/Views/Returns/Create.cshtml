@@ -152,9 +152,8 @@
             var html = '';
             var index = 0;
 
-            // Use selected receipt id as GRN number display if server doesn't return number
-            var grnDisplay = $('#OriginalReceiptId').val();
-            $('#grnInfo').html(`<strong>GRN #${grnDisplay}</strong><br />Supplier ID: ${data.supplierId}`);
+            // Use GRN number from server response
+            $('#grnInfo').html(`<strong>GRN #${data.grnNumber}</strong><br />Supplier ID: ${data.supplierId}`);
 
             for (var i = 0; i < data.lines.length; i++) {
                 var line = data.lines[i];
@@ -168,11 +167,18 @@
                         <td><strong>${line.articleCode}</strong><br /><small>${line.articleName}</small></td>
                         <td class="text-end">${line.receivedQuantity}</td>
                         <td class="text-end">${line.previouslyReturned}</td>
-                        <td class="text-end">${line.availableToReturn}</td>
-                        <td><input type="number" name="Lines[${index}].QuantityToReturn" class="form-control return-qty" style="width: 100px;" value="0" max="${line.availableToReturn}" onchange="updateReturnTotal(${index})" /></td>
+                        <td class="text-end text-primary">${line.availableToReturn}</td>
+                        <td>
+                            <input type="number" name="Lines[${index}].QuantityToReturn" class="form-control return-qty" style="width: 100px;"
+                                   value="0" min="0" max="${line.availableToReturn}" onchange="updateReturnTotal(${index})" />
+                        </td>
                         <td class="text-end">$${(line.unitCost || 0).toFixed(2)}</td>
                         <td class="return-total-${index} text-end fw-bold">$0.00</td>
-                        <td><input type="text" name="Lines[${index}].Reason" class="form-control" placeholder="Return reason" /></td>
+                        <td>
+                            <input type="text" name="Lines[${index}].Reason" class="form-control" placeholder="Return reason" />
+                        </td>
+                        ${line.isBatchTracked ? `<input type="hidden" name="Lines[${index}].BatchNumber" value="${line.batchNumber}" />` : ''}
+                        ${line.isSerialized ? `<input type="hidden" name="Lines[${index}].SerialNumber" value="${line.serialNumber}" />` : ''}
                     </tr>
                 `;
                 index++;
@@ -183,10 +189,8 @@
             }
 
             $('#itemsBody').html(html);
-            // reset total
             $('#totalReturnDisplay').text('$0.00');
         }
-
         function updateReturnTotal(index) {
             var qty = parseFloat($(`input[name="Lines[${index}].QuantityToReturn"]`).val()) || 0;
             var unitCost = parseFloat($(`input[name="Lines[${index}].UnitCost"]`).val()) || 0;

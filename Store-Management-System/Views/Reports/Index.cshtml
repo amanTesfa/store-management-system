@@ -1,0 +1,134 @@
+﻿@{
+    ViewData["Title"] = "Reports";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">Inventory Reports</h1>
+    <span class="badge bg-dark text-white ms-2">Analytics</span>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="reportTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="current-stock-tab" data-bs-toggle="tab" data-bs-target="#currentStock" type="button" role="tab">
+                    <i class="align-middle" data-feather="box"></i> Current Stock
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="low-stock-tab" data-bs-toggle="tab" data-bs-target="#lowStock" type="button" role="tab">
+                    <i class="align-middle" data-feather="alert-triangle"></i> Low Stock Alert
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="stock-movement-tab" data-bs-toggle="tab" data-bs-target="#stockMovement" type="button" role="tab">
+                    <i class="align-middle" data-feather="activity"></i> Stock Movement
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="stock-valuation-tab" data-bs-toggle="tab" data-bs-target="#stockValuation" type="button" role="tab">
+                    <i class="align-middle" data-feather="dollar-sign"></i> Stock Valuation
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="reportTabsContent">
+            <div class="tab-pane fade show active" id="currentStock" role="tabpanel">
+                <div id="currentStockContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="lowStock" role="tabpanel">
+                <div id="lowStockContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="stockMovement" role="tabpanel">
+                <div id="stockMovementContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="tab-pane fade" id="stockValuation" role="tabpanel">
+                <div id="stockValuationContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        function loadCurrentStock() {
+            $.ajax({
+                url: '@Url.Action("CurrentStock", "Reports")',
+                type: 'GET',
+                success: function(response) {
+                    $('#currentStockContent').html(response);
+                    feather.replace();
+                }
+            });
+        }
+
+        function loadLowStock() {
+            $.ajax({
+                url: '@Url.Action("LowStock", "Reports")',
+                type: 'GET',
+                success: function(response) {
+                    $('#lowStockContent').html(response);
+                    feather.replace();
+                }
+            });
+        }
+
+        function loadStockMovement() {
+            $.ajax({
+                url: '@Url.Action("StockMovement", "Reports")',
+                type: 'GET',
+                success: function(response) {
+                    $('#stockMovementContent').html(response);
+                    feather.replace();
+                }
+            });
+        }
+
+        function loadStockValuation() {
+            $.ajax({
+                url: '@Url.Action("StockValuation", "Reports")',
+                type: 'GET',
+                success: function(response) {
+                    $('#stockValuationContent').html(response);
+                    feather.replace();
+                    if (typeof renderValuationChart === 'function') renderValuationChart();
+                }
+            });
+        }
+
+        $(document).ready(function() {
+            loadCurrentStock();
+
+            $('#current-stock-tab').on('shown.bs.tab', function() { loadCurrentStock(); });
+            $('#low-stock-tab').on('shown.bs.tab', function() { loadLowStock(); });
+            $('#stock-movement-tab').on('shown.bs.tab', function() { loadStockMovement(); });
+            $('#stock-valuation-tab').on('shown.bs.tab', function() { loadStockValuation(); });
+        });
+    </script>
+}

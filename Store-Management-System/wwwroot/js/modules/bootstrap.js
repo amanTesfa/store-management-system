@@ -1,0 +1,2 @@
+﻿// Bootstrap initialization
+import 'bootstrap';

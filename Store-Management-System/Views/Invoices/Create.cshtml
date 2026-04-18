@@ -123,57 +123,84 @@
 </form>
 
 @section Scripts {
-    @{
-        await Html.RenderPartialAsync("_ValidationScriptsPartial");
-    }
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
     <script>
-        $('#SalesOrderId').on('change', function() {
-            var soId = $(this).val();
-            if (soId) {
-                $.ajax({
-                    url: '@Url.Action("GetSalesOrderLines", "Invoices")',
-                    type: 'GET',
-                    data: { soId: soId },
-                    success: function(response) {
-                        if (response.success) {
-                            loadSOLines(response);
-                        } else {
-                            $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load items.</td></tr>');
+        $(document).ready(function() {
+            console.log('jQuery loaded successfully');
+            feather.replace();
+
+            $('#SalesOrderId').on('change', function() {
+                var soId = $(this).val();
+                console.log('SO Selected:', soId);
+
+                if (soId) {
+                    $.ajax({
+                        url: '@Url.Action("GetSalesOrderLines", "Invoices")',
+                        type: 'GET',
+                        data: { soId: soId },
+                        success: function(response) {
+                            console.log('Response:', response);
+                            if (response.success) {
+                                loadSOLines(response);
+                            } else {
+                                $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-danger">Failed to load items.</td></tr>');
+                            }
+                        },
+                        error: function(xhr, status, error) {
+                            console.error('AJAX Error:', error);
+                            $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-danger">Error loading items: ' + error + '</td></tr>');
                         }
-                    }
-                });
-            } else {
-                $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-muted">Select a Sales Order to load items.</td></tr>');
-                $('#soInfo').html('Select a Sales Order to see details.');
-            }
+                    });
+                } else {
+                    $('#itemsBody').html('<tr><td colspan="7" class="text-center py-4 text-muted">Select a Sales Order to load items.</td></tr>');
+                    $('#soInfo').html('Select a Sales Order to see details.');
+                }
+            });
         });
 
         function loadSOLines(data) {
+            console.log('Loading lines, count:', data.lines ? data.lines.length : 0);
+
             var html = '';
             var index = 0;
 
-            $('#soInfo').html(`<strong>Sales Order #${data.soNumber}</strong><br />Customer: ${data.customerName}`);
+            $('#soInfo').html('<strong>Sales Order #' + data.soNumber + '</strong><br />Customer: ' + data.customerName);
 
-            for (var i = 0; i < data.lines.length; i++) {
-                var line = data.lines[i];
-                if (line.availableToInvoice <= 0) continue;
+            if (data.lines && data.lines.length > 0) {
+                for (var i = 0; i < data.lines.length; i++) {
+                    var line = data.lines[i];
+                    console.log('Line:', line);
 
-                html += `
-                    <tr class="invoice-line" data-index="${index}">
-                        <input type="hidden" name="Lines[${index}].SalesOrderLineId" value="${line.lineId}" />
-                        <input type="hidden" name="Lines[${index}].ArticleId" value="${line.articleId}" />
-                        <input type="hidden" name="Lines[${index}].UnitPrice" value="${line.unitPrice}" />
-                        <td><strong>${line.articleCode}</strong><br /><small>${line.articleName}</small></td>
-                        <td class="text-end">${line.shippedQuantity}</td>
-                        <td class="text-end">${line.previouslyInvoiced}</td>
-                        <td class="text-end text-primary">${line.availableToInvoice}</td>
-                        <td><input type="number" name="Lines[${index}].Quantity" class="form-control invoice-qty" style="width: 100px;" value="${line.availableToInvoice}" min="0" max="${line.availableToInvoice}" onchange="calculateTotal()" /></td>
-                        <td class="text-end">$${line.unitPrice.toFixed(2)}</td>
-                        <td class="line-total-${index} text-end fw-bold">$0.00</td>
-                    </tr>
-                `;
-                index++;
+                    // Use ordered quantity instead of shipped quantity for invoicing
+                    var availableToInvoice = line.orderedQuantity - line.previouslyInvoiced;
+
+                    if (availableToInvoice <= 0) continue;
+
+                    html += `
+                        <tr class="invoice-line" data-index="${index}">
+                            <input type="hidden" name="Lines[${index}].SalesOrderLineId" value="${line.lineId}" />
+                            <input type="hidden" name="Lines[${index}].ArticleId" value="${line.articleId}" />
+                            <input type="hidden" name="Lines[${index}].UnitPrice" value="${line.unitPrice}" />
+                            <td>
+                                <strong>${line.articleCode}</strong><br />
+                                <small class="text-muted">${escapeHtml(line.articleName)}</small>
+                            </td>
+                            <td class="text-end">${line.orderedQuantity}</td>
+                            <td class="text-end">${line.previouslyInvoiced}</td>
+                            <td class="text-end text-primary">${availableToInvoice}</td>
+                            <td>
+                                <input type="number" name="Lines[${index}].Quantity" class="form-control invoice-qty"
+                                       style="width: 100px;" value="${availableToInvoice}"
+                                       min="0" max="${availableToInvoice}" onchange="calculateTotal()" />
+                            </td>
+                            <td class="text-end">${line.unitPrice.toFixed(2)}</td>
+                            <td class="line-total-${index} text-end fw-bold">${(availableToInvoice * line.unitPrice).toFixed(2)}</td>
+                        </tr>
+                    `;
+                    index++;
+                }
             }
 
             if (index === 0) {
@@ -186,19 +213,28 @@
 
         function calculateTotal() {
             var subtotal = 0;
-            $('.invoice-line').each(function(index) {
+            $('.invoice-line').each(function(idx) {
                 var qty = parseFloat($(this).find('.invoice-qty').val()) || 0;
                 var price = parseFloat($(this).find('input[name$=".UnitPrice"]').val()) || 0;
                 var total = qty * price;
-                $(`.line-total-${index}`).text('$' + total.toFixed(2));
+                var lineIndex = $(this).data('index');
+                if (lineIndex !== undefined) {
+                    $('.line-total-' + lineIndex).text('$' + total.toFixed(2));
+                }
                 subtotal += total;
             });
             $('#subtotalDisplay').text('$' + subtotal.toFixed(2));
             $('#totalDisplay').text('$' + subtotal.toFixed(2));
         }
 
-        $(document).ready(function() {
-            feather.replace();
-        });
+        function escapeHtml(str) {
+            if (!str) return '';
+            return str.replace(/[&<>]/g, function(m) {
+                if (m === '&') return '&amp;';
+                if (m === '<') return '&lt;';
+                if (m === '>') return '&gt;';
+                return m;
+            });
+        }
     </script>
 }

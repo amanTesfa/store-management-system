@@ -1,5 +1,9 @@
-﻿@{
+﻿@using Microsoft.EntityFrameworkCore
+@{
     ViewData["Title"] = "Dashboard";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+
+    // Get real data from ViewBag (set in controller)
 }
 
 <!-- Page Title -->
@@ -19,18 +23,18 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col mt-0">
-                        <h5 class="card-title">Sales</h5>
+                        <h5 class="card-title">Total Products</h5>
                     </div>
                     <div class="col-auto">
                         <div class="stat text-primary">
-                            <i class="align-middle" data-feather="truck"></i>
+                            <i class="align-middle" data-feather="box"></i>
                         </div>
                     </div>
                 </div>
-                <h1 class="mt-1 mb-3">2,382</h1>
+                <h1 class="mt-1 mb-3">@ViewBag.TotalProducts</h1>
                 <div class="mb-0">
-                    <span class="text-danger">-3.65%</span>
-                    <span class="text-muted">Since last week</span>
+                    <span class="text-success">@ViewBag.ActiveProducts%</span>
+                    <span class="text-muted">Active products</span>
                 </div>
             </div>
         </div>
@@ -41,18 +45,18 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col mt-0">
-                        <h5 class="card-title">Visitors</h5>
+                        <h5 class="card-title">Low Stock</h5>
                     </div>
                     <div class="col-auto">
-                        <div class="stat text-primary">
-                            <i class="align-middle" data-feather="users"></i>
+                        <div class="stat text-warning">
+                            <i class="align-middle" data-feather="alert-triangle"></i>
                         </div>
                     </div>
                 </div>
-                <h1 class="mt-1 mb-3">14,212</h1>
+                <h1 class="mt-1 mb-3">@ViewBag.LowStockCount</h1>
                 <div class="mb-0">
-                    <span class="text-success">5.25%</span>
-                    <span class="text-muted">Since last week</span>
+                    <span class="text-danger">@ViewBag.OutOfStockCount</span>
+                    <span class="text-muted">Out of stock</span>
                 </div>
             </div>
         </div>
@@ -63,18 +67,18 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col mt-0">
-                        <h5 class="card-title">Earnings</h5>
+                        <h5 class="card-title">Inventory Value</h5>
                     </div>
                     <div class="col-auto">
-                        <div class="stat text-primary">
+                        <div class="stat text-success">
                             <i class="align-middle" data-feather="dollar-sign"></i>
                         </div>
                     </div>
                 </div>
-                <h1 class="mt-1 mb-3">$21,300</h1>
+                <h1 class="mt-1 mb-3">@ViewBag.TotalInventoryValue.ToString("N0")</h1>
                 <div class="mb-0">
-                    <span class="text-success">6.65%</span>
-                    <span class="text-muted">Since last week</span>
+                    <span class="text-success">@ViewBag.TotalStockQuantity</span>
+                    <span class="text-muted">Total units</span>
                 </div>
             </div>
         </div>
@@ -85,18 +89,18 @@
             <div class="card-body">
                 <div class="row">
                     <div class="col mt-0">
-                        <h5 class="card-title">Orders</h5>
+                        <h5 class="card-title">This Month Sales</h5>
                     </div>
                     <div class="col-auto">
-                        <div class="stat text-primary">
+                        <div class="stat text-info">
                             <i class="align-middle" data-feather="shopping-cart"></i>
                         </div>
                     </div>
                 </div>
-                <h1 class="mt-1 mb-3">64</h1>
+                <h1 class="mt-1 mb-3">@ViewBag.MonthlySalesCount</h1>
                 <div class="mb-0">
-                    <span class="text-danger">-2.25%</span>
-                    <span class="text-muted">Since last week</span>
+                    <span class="text-success">@ViewBag.MonthlySalesValue.ToString("C")</span>
+                    <span class="text-muted">Revenue</span>
                 </div>
             </div>
         </div>
@@ -105,49 +109,34 @@
 
 <!-- Charts Row -->
 <div class="row">
-    <!-- Line Chart -->
+    <!-- Stock Movement Chart -->
     <div class="col-xl-6 col-xxl-7">
         <div class="card flex-fill w-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">Recent Movement</h5>
+                <h5 class="card-title mb-0">Stock Movement (Last 6 Months)</h5>
             </div>
             <div class="card-body py-3">
                 <div class="chart chart-sm">
-                    <canvas id="chartjs-dashboard-line"></canvas>
+                    <canvas id="stockMovementChart"></canvas>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Pie Chart -->
+    <!-- Stock by Category Pie Chart -->
     <div class="col-12 col-md-6 col-xxl-3 d-flex order-2 order-xxl-3">
         <div class="card flex-fill w-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">Browser Usage</h5>
+                <h5 class="card-title mb-0">Stock by Category</h5>
             </div>
             <div class="card-body d-flex">
                 <div class="align-self-center w-100">
                     <div class="py-3">
                         <div class="chart chart-xs">
-                            <canvas id="chartjs-dashboard-pie"></canvas>
+                            <canvas id="categoryPieChart"></canvas>
                         </div>
                     </div>
-                    <table class="table mb-0">
-                        <tbody>
-                            <tr>
-                                <td>Chrome</td>
-                                <td class="text-end">4306</td>
-                            </tr>
-                            <tr>
-                                <td>Firefox</td>
-                                <td class="text-end">3801</td>
-                            </tr>
-                            <tr>
-                                <td>IE</td>
-                                <td class="text-end">1689</td>
-                            </tr>
-                        </tbody>
-                    </table>
+                    <div id="categoryLegend" class="mt-3"></div>
                 </div>
             </div>
         </div>
@@ -168,61 +157,63 @@
     </div>
 </div>
 
-<!-- Bar Chart Row -->
+<!-- Recent Orders Table -->
 <div class="row">
     <div class="col-12 col-lg-8 col-xxl-9 d-flex">
         <div class="card flex-fill">
             <div class="card-header">
-                <h5 class="card-title mb-0">Latest Projects</h5>
+                <h5 class="card-title mb-0">Recent Sales Orders</h5>
             </div>
             <div class="table-responsive">
                 <table class="table table-hover my-0">
                     <thead>
                         <tr>
-                            <th>Name</th>
-                            <th class="d-none d-xl-table-cell">Start Date</th>
-                            <th class="d-none d-xl-table-cell">End Date</th>
+                            <th>Order #</th>
+                            <th>Customer</th>
+                            <th>Date</th>
+                            <th>Total</th>
                             <th>Status</th>
-                            <th class="d-none d-md-table-cell">Assignee</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>Project Apollo</td>
-                            <td class="d-none d-xl-table-cell">01/01/2023</td>
-                            <td class="d-none d-xl-table-cell">31/06/2023</td>
-                            <td><span class="badge bg-success">Done</span></td>
-                            <td class="d-none d-md-table-cell">Vanessa Tucker</td>
-                        </tr>
-                        <tr>
-                            <td>Project Fireball</td>
-                            <td class="d-none d-xl-table-cell">01/01/2023</td>
-                            <td class="d-none d-xl-table-cell">31/06/2023</td>
-                            <td><span class="badge bg-danger">Cancelled</span></td>
-                            <td class="d-none d-md-table-cell">William Harris</td>
-                        </tr>
-                        <tr>
-                            <td>Project Hades</td>
-                            <td class="d-none d-xl-table-cell">01/01/2023</td>
-                            <td class="d-none d-xl-table-cell">31/06/2023</td>
-                            <td><span class="badge bg-success">Done</span></td>
-                            <td class="d-none d-md-table-cell">Sharon Lessman</td>
-                        </tr>
+                        @if (ViewBag.RecentOrders != null && ViewBag.RecentOrders.Count > 0)
+                        {
+                            @foreach (var order in ViewBag.RecentOrders)
+                            {
+                                <tr>
+                                    <td><code>@order.VoucherNumber</code></td>
+                                    <td>@order.CustomerName</td>
+                                    <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
+                                    <td>@order.TotalAmount.ToString("C")</td>
+                                    <td>
+                                        <span class="badge @(order.Status == "Completed" ? "bg-success" : order.Status == "Shipped" ? "bg-info" : order.Status == "Approved" ? "bg-primary" : "bg-warning")">
+                                            @order.Status
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="text-center py-3">No recent orders</td>
+                            </tr>
+                        }
                     </tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Monthly Sales Bar Chart -->
+    <!-- Top Products Bar Chart -->
     <div class="col-12 col-lg-4 col-xxl-3 d-flex">
         <div class="card flex-fill w-100">
             <div class="card-header">
-                <h5 class="card-title mb-0">Monthly Sales</h5>
+                <h5 class="card-title mb-0">Top Selling Products</h5>
             </div>
             <div class="card-body d-flex w-100">
-                <div class="align-self-center chart chart-lg">
-                    <canvas id="chartjs-dashboard-bar"></canvas>
+                <div class="align-self-center chart chart-lg w-100">
+                    <canvas id="topProductsChart"></canvas>
                 </div>
             </div>
         </div>
@@ -230,71 +221,103 @@
 </div>
 
 @section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Line Chart
-            var ctx = document.getElementById("chartjs-dashboard-line").getContext("2d");
-            var gradient = ctx.createLinearGradient(0, 0, 0, 225);
-            gradient.addColorStop(0, "rgba(215, 227, 244, 1)");
-            gradient.addColorStop(1, "rgba(215, 227, 244, 0)");
-
-            new Chart(document.getElementById("chartjs-dashboard-line"), {
+            // Stock Movement Chart
+            var ctx = document.getElementById("stockMovementChart").getContext("2d");
+            var months = @Html.Raw(Json.Serialize(ViewBag.MovementMonths));
+            var inData = @Html.Raw(Json.Serialize(ViewBag.MovementIn));
+            var outData = @Html.Raw(Json.Serialize(ViewBag.MovementOut));
+            
+            new Chart(ctx, {
                 type: "line",
                 data: {
-                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
-                    datasets: [{
-                        label: "Sales ($)",
-                        fill: true,
-                        backgroundColor: gradient,
-                        borderColor: window.theme ? window.theme.primary : "#4361ee",
-                        data: [2115, 1562, 1584, 1892, 1587, 1923, 2566, 2448, 2805, 3438, 2917, 3327]
-                    }]
+                    labels: months,
+                    datasets: [
+                        {
+                            label: "Stock In",
+                            data: inData,
+                            borderColor: "#28a745",
+                            backgroundColor: "rgba(40,167,69,0.1)",
+                            tension: 0.3,
+                            fill: true
+                        },
+                        {
+                            label: "Stock Out",
+                            data: outData,
+                            borderColor: "#dc3545",
+                            backgroundColor: "rgba(220,53,69,0.1)",
+                            tension: 0.3,
+                            fill: true
+                        }
+                    ]
                 },
                 options: {
-                    maintainAspectRatio: false,
                     responsive: true,
+                    maintainAspectRatio: true,
                     plugins: {
-                        legend: { display: false }
+                        legend: { position: "top" },
+                        tooltip: { callbacks: { label: function(context) { return context.dataset.label + ": " + context.raw.toFixed(0) + " units"; } } }
                     },
-                    scales: {
-                        y: { ticks: { stepSize: 1000 } }
-                    }
+                    scales: { y: { beginAtZero: true, title: { display: true, text: "Quantity" } } }
                 }
             });
 
-            // Pie Chart
-            new Chart(document.getElementById("chartjs-dashboard-pie"), {
+            // Category Pie Chart
+            var categoryCtx = document.getElementById("categoryPieChart").getContext("2d");
+            var categoryNames = @Html.Raw(Json.Serialize(ViewBag.CategoryNames));
+            var categoryValues = @Html.Raw(Json.Serialize(ViewBag.CategoryValues));
+            var categoryColors = ['#4361ee', '#28a745', '#ffc107', '#dc3545', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'];
+            
+            var pieChart = new Chart(categoryCtx, {
                 type: "pie",
                 data: {
-                    labels: ["Chrome", "Firefox", "IE"],
+                    labels: categoryNames,
                     datasets: [{
-                        data: [4306, 3801, 1689],
-                        backgroundColor: ["#4361ee", "#ffb703", "#e63946"],
-                        borderWidth: 5
+                        data: categoryValues,
+                        backgroundColor: categoryColors.slice(0, categoryNames.length),
+                        borderWidth: 0
                     }]
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: false,
+                    maintainAspectRatio: true,
                     plugins: { legend: { display: false } }
                 }
             });
 
-            // Bar Chart
-            new Chart(document.getElementById("chartjs-dashboard-bar"), {
+            // Generate custom legend
+            var legendHtml = '<div class="row g-2">';
+            for (var i = 0; i < categoryNames.length; i++) {
+                legendHtml += '<div class="col-6"><span style="display:inline-block;width:12px;height:12px;background:' + categoryColors[i] + ';border-radius:2px;margin-right:5px;"></span> ' + categoryNames[i] + ' (' + categoryValues[i].toFixed(0) + ')</div>';
+            }
+            legendHtml += '</div>';
+            document.getElementById('categoryLegend').innerHTML = legendHtml;
+
+            // Top Products Chart
+            var productsCtx = document.getElementById("topProductsChart").getContext("2d");
+            var productNames = @Html.Raw(Json.Serialize(ViewBag.TopProductNames));
+            var productQuantities = @Html.Raw(Json.Serialize(ViewBag.TopProductQuantities));
+            
+            new Chart(productsCtx, {
                 type: "bar",
                 data: {
-                    labels: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"],
+                    labels: productNames,
                     datasets: [{
-                        label: "Sales",
+                        label: "Units Sold",
+                        data: productQuantities,
                         backgroundColor: "#4361ee",
-                        data: [54, 67, 41, 55, 62, 45, 55, 73, 60, 76, 48, 79]
+                        borderRadius: 5
                     }]
                 },
                 options: {
-                    maintainAspectRatio: false,
                     responsive: true,
-                    plugins: { legend: { display: false } }
+                    maintainAspectRatio: true,
+                    indexAxis: 'y',
+                    plugins: { legend: { display: false } },
+                    scales: { x: { title: { display: true, text: "Quantity Sold" } } }
                 }
             });
 

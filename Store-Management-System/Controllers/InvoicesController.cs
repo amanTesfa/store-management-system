@@ -129,14 +129,13 @@ namespace Store_Management_System.Controllers
                 orderedQuantity = l.Quantity,
                 shippedQuantity = l.ShippedQuantity ?? 0,
                 previouslyInvoiced = invoiced.ContainsKey(l.ArticleId) ? invoiced[l.ArticleId] : 0,
-                availableToInvoice = (l.ShippedQuantity ?? 0) - (invoiced.ContainsKey(l.ArticleId) ? invoiced[l.ArticleId] : 0),
+                availableToInvoice = l.Quantity - (invoiced.ContainsKey(l.ArticleId) ? invoiced[l.ArticleId] : 0), // Use ordered quantity
                 unitPrice = l.UnitPrice,
-                discountPercent = l.DiscountPercent
+                discountPercent = l.DiscountPercent 
             }).ToList();
 
             return Json(new { success = true, lines = lines, soNumber = so.VoucherNumber, customerName = so.Consignee?.ConsigneeName });
         }
-
         // POST: Invoices/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -175,6 +174,7 @@ namespace Store_Management_System.Controllers
                         VoucherType = "INV",
                         ActivityId = 4, // Invoice activity
                         ConsigneeId = so.ConsigneeId,
+                        WarehouseId = so.WarehouseId,  // Add WarehouseId to invoice header
                         VoucherDate = DateOnly.FromDateTime(model.InvoiceDate),
                         PostingDate = DateOnly.FromDateTime(model.InvoiceDate),
                         DueDate = model.DueDate.HasValue ? DateOnly.FromDateTime(model.DueDate.Value) : null,
@@ -191,11 +191,12 @@ namespace Store_Management_System.Controllers
 
                     _context.Vouchers.Add(invoice);
                     await _context.SaveChangesAsync();
-                    // Get the article to find its unit
-                    var article = await _context.Articles.FindAsync(validLines.First().ArticleId);
+
                     // Add invoice lines
                     foreach (var line in validLines)
                     {
+                        var article = await _context.Articles.FindAsync(line.ArticleId);
+
                         var invoiceLine = new VoucherLine
                         {
                             VoucherId = invoice.Id,
@@ -203,6 +204,7 @@ namespace Store_Management_System.Controllers
                             Quantity = line.Quantity,
                             UnitPrice = line.UnitPrice,
                             UnitId = article?.BaseUnitId ?? 1,
+                            WarehouseId = so.WarehouseId ?? 1,  // Add WarehouseId
                             LineTotal = line.LineTotal,
                             OriginalVoucherLineId = line.SalesOrderLineId
                         };
@@ -225,7 +227,6 @@ namespace Store_Management_System.Controllers
             await PopulateSalesOrders(model);
             return View(model);
         }
-
         // GET: Invoices/Details/5
         [HttpGet]
         public async Task<IActionResult> Details(int id)
@@ -325,7 +326,7 @@ namespace Store_Management_System.Controllers
         {
             var salesOrders = await _context.Vouchers
                 .Include(v => v.Consignee)
-                .Where(v => v.VoucherType == "SO" && v.Status == "Shipped")
+                .Where(v => v.VoucherType == "SO" && (v.Status == "Approved" || v.Status == "Shipped"))
                 .Select(v => new SelectListItem
                 {
                     Value = v.Id.ToString(),
@@ -335,7 +336,6 @@ namespace Store_Management_System.Controllers
 
             model.SalesOrders = new SelectList(salesOrders, "Value", "Text", selectedSoId);
         }
-
         private int GetCurrentUserId()
         {
             var userIdClaim = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier);

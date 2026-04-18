@@ -1,16 +1,16 @@
-﻿import "../scss/app.scss";
+﻿import './modules/bootstrap';
+import { initSidebar } from './modules/sidebar';
+import { initTheme } from './modules/theme';
+import { initFeather } from './modules/feather';
+import { initCharts } from './modules/chartjs';
+import { initFlatpickr } from './modules/flatpickr';
+import { initVectorMaps } from './modules/vector-maps';
 
-// AdminKit (required)
-import "./modules/bootstrap";
-import "./modules/sidebar";
-import "./modules/theme";
-import "./modules/feather";
-
-// Charts
-import "./modules/chartjs";
-
-// Forms
-import "./modules/flatpickr";
-
-// Maps
-import "./modules/vector-maps";
+document.addEventListener("DOMContentLoaded", function () {
+    initSidebar();
+    initTheme();
+    initFeather();
+    initCharts();
+    initFlatpickr();
+    initVectorMaps();
+});

@@ -2,20 +2,23 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.Extensions;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 using System.Text.RegularExpressions;
-
+using Store_Management_System.Extensions;
 namespace Store_Management_System.Controllers
 {
     [Authorize(Roles = "Admin,Manager")]
     public class GoodsReceiptsController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public GoodsReceiptsController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public GoodsReceiptsController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: GoodsReceipts
@@ -266,10 +269,11 @@ namespace Store_Management_System.Controllers
 
                     grn.SubTotal = receivedLines.Sum(l => l.receiptLine.QuantityToReceive * l.receiptLine.UnitPrice);
                     grn.TotalAmount = grn.SubTotal + totalLandedCost;
-
+                    var grnDto = grn.ToGoodsReceiptDto();
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
-
+                    
+                    await _activityLogService.LogAsync("Create", "GoodsReceipt", grnDto.Id, null, grnDto.VoucherNumber, $"Created GRN {grnDto.VoucherNumber} linked to PO {po.VoucherNumber}");
                     TempData["SuccessMessage"] = $"Goods Receipt {grn.VoucherNumber} created and posted successfully!";
                     return RedirectToAction(nameof(Index));
                 }

@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.Extensions;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 using System.Text.RegularExpressions;
 
@@ -12,10 +14,11 @@ namespace Store_Management_System.Controllers
     public class PurchaseOrdersController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public PurchaseOrdersController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public PurchaseOrdersController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: PurchaseOrders
@@ -182,9 +185,9 @@ namespace Store_Management_System.Controllers
                     };
                     _context.VoucherLines.Add(voucherLine);
                 }
-
+                var poDto = voucher.ToPurchaseOrderDto();
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Create", "PurchaseOrder", poDto.Id, newValue: $"Created PO {poDto.VoucherNumber} with {validLines.Count} lines.");
                 TempData["SuccessMessage"] = $"Purchase Order {voucher.VoucherNumber} created successfully!";
                 return RedirectToAction(nameof(Index));
             }
@@ -307,9 +310,9 @@ namespace Store_Management_System.Controllers
                     };
                     _context.VoucherLines.Add(voucherLine);
                 }
-
+                var poDto = voucher.ToPurchaseOrderDto();
                 await _context.SaveChangesAsync();
-
+                   await _activityLogService.LogAsync("Edit", "PurchaseOrder", poDto.Id, oldValue: $"Edited PO {poDto.VoucherNumber}", newValue: $"Updated PO {poDto.VoucherNumber} with {validLines.Count} lines.");
                 TempData["SuccessMessage"] = $"Purchase Order {voucher.VoucherNumber} updated successfully!";
                 return RedirectToAction(nameof(Index));
             }
@@ -337,9 +340,9 @@ namespace Store_Management_System.Controllers
             voucher.ApprovedBy = GetCurrentUserId();
             voucher.ApprovalComments = comments;
             voucher.UpdatedAt = DateTime.UtcNow;
-
+            var poDto = voucher.ToPurchaseOrderDto();
             await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Approve", "PurchaseOrder", poDto.Id, oldValue: $"Approved PO {poDto.VoucherNumber}", newValue: $"PO {poDto.VoucherNumber} approved with comments: {comments}");
             return Json(new { success = true, message = $"Purchase Order {voucher.VoucherNumber} approved successfully!" });
         }
 
@@ -360,9 +363,9 @@ namespace Store_Management_System.Controllers
             voucher.Status = "Sent";
             voucher.SentToSupplierAt = DateTime.UtcNow;
             voucher.UpdatedAt = DateTime.UtcNow;
-
+            var poDto = voucher.ToPurchaseOrderDto();
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("SendToSupplier", "PurchaseOrder", poDto.Id, oldValue: $"Sent PO {poDto.VoucherNumber} to supplier", newValue: $"PO {poDto.VoucherNumber} sent to supplier at {voucher.SentToSupplierAt}");
             return Json(new { success = true, message = $"Purchase Order {voucher.VoucherNumber} sent to supplier!" });
         }
 
@@ -383,9 +386,9 @@ namespace Store_Management_System.Controllers
             voucher.Status = "Cancelled";
             voucher.Remarks = (voucher.Remarks != null ? voucher.Remarks + " | " : "") + $"Cancelled: {reason}";
             voucher.UpdatedAt = DateTime.UtcNow;
-
+            var poDto = voucher.ToPurchaseOrderDto();
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("Cancel", "PurchaseOrder", poDto.Id, oldValue: $"Cancelled PO {poDto.VoucherNumber}", newValue: $"PO {poDto.VoucherNumber} cancelled with reason: {reason}");
             return Json(new { success = true, message = $"Purchase Order {voucher.VoucherNumber} cancelled!" });
         }
 

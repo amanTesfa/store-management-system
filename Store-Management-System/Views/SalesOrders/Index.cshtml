@@ -31,7 +31,7 @@
         </div>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="table-responsive table-scrollable">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
@@ -145,69 +145,117 @@
         $('#searchBtn').on('click', function() { searchTerm = $('#searchInput').val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); });
         $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); } });
         $('#statusFilter').on('change', function() { status = $(this).val(); currentPage = 1; refreshPage(); });
-
         function approveSO(id) {
-            if (confirm('Approve this sales order? This will reserve stock.')) {
+            showConfirm('Approve this sales order? This will reserve stock.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
                     url: '@Url.Action("Approve", "SalesOrders")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
                     }
                 });
-            }
+            });
         }
 
-        function shipSO(id) {
-            if (confirm('Mark this sales order as shipped?')) {
+                function shipSO(id) {
+            showConfirm('Mark this sales order as shipped? This will update the order status.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
                     url: '@Url.Action("Ship", "SalesOrders")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
                     }
                 });
-            }
+            });
         }
 
-        function completeSO(id) {
-            if (confirm('Complete this sales order? This will update stock levels.')) {
+              function completeSO(id) {
+            showConfirm('Complete this sales order? This will update stock levels and finalize the order.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
                     url: '@Url.Action("Complete", "SalesOrders")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
                     }
                 });
-            }
+            });
         }
+
 
         function cancelSO(id) {
-            var reason = prompt('Enter cancellation reason:');
-            if (reason) {
-                var token = $('input[name="__RequestVerificationToken"]').val();
-                $.ajax({
-                    url: '@Url.Action("Cancel", "SalesOrders")',
-                    type: 'POST',
-                    data: { id: id, reason: reason, __RequestVerificationToken: token },
-                    success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
-                    }
-                });
-            }
+            showConfirm('Cancel this sales order? This action cannot be undone.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
+                var reason = prompt('Enter cancellation reason:');
+                if (reason) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '@Url.Action("Cancel", "SalesOrders")',
+                        type: 'POST',
+                        data: { id: id, reason: reason, __RequestVerificationToken: token },
+                        success: function(response) {
+                            $('#loadingSpinner').fadeOut(200);
+                            if (response.success) {
+                                showToast('success', response.message);
+                                refreshPage();
+                            } else {
+                                showToast('error', response.message);
+                            }
+                        },
+                        error: function() {
+                            $('#loadingSpinner').fadeOut(200);
+                            showToast('error', 'An error occurred. Please try again.');
+                        }
+                    });
+                } else {
+                    $('#loadingSpinner').fadeOut(200);
+                }
+            });
         }
 
-        function showToast(type, message) {
+              function showToast(type, message) {
             var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
             var icon = type === 'success' ? 'check-circle' : 'alert-circle';
             var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;

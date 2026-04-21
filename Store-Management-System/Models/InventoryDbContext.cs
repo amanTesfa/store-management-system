@@ -116,13 +116,57 @@ public partial class InventoryDbContext : DbContext
     public virtual DbSet<WithholdingTaxRule> WithholdingTaxRules { get; set; }
 
     public virtual DbSet<WithholdingTransaction> WithholdingTransactions { get; set; }
-
+    public virtual DbSet<ActivityLog> ActivityLogs { get; set; }
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Server=THANOS;Database=InventoryDB;Trusted_Connection=True;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<ActivityLog>(entity =>
+        {
+            entity.ToTable("ActivityLogs");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.UserId)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.UserName)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            entity.Property(e => e.Action)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.EntityType)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Details)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.IpAddress)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            // Indexes
+            entity.HasIndex(e => e.UserId)
+                .HasDatabaseName("IX_ActivityLogs_UserId");
+
+            entity.HasIndex(e => e.EntityType)
+                .HasDatabaseName("IX_ActivityLogs_EntityType");
+
+            entity.HasIndex(e => e.Action)
+                .HasDatabaseName("IX_ActivityLogs_Action");
+
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("IX_ActivityLogs_CreatedAt");
+        });
         modelBuilder.Entity<AccountLedger>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__AccountL__3214EC0752954F71");

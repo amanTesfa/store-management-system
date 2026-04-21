@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 using System.Text.Json;
 
@@ -11,10 +12,11 @@ namespace Store_Management_System.Controllers
     public class SuppliersController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public SuppliersController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public SuppliersController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;   
         }
 
         // GET: Suppliers
@@ -234,7 +236,7 @@ namespace Store_Management_System.Controllers
 
                 _context.Update(supplier);
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Edit", "Supplier", supplier.Id, details: $"Updated supplier '{supplier.Name}'");
                 // Recalculate rating based on articles? (Optional)
                 await UpdateSupplierRating(id);
 
@@ -276,7 +278,7 @@ namespace Store_Management_System.Controllers
 
             _context.Update(supplier);
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("Delete", "Supplier", supplier.Id, details: $"Deleted supplier '{supplier.Name}'");
             return Json(new { success = true, message = $"Supplier '{supplier.Name}' has been deleted successfully!" });
         }
 

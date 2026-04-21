@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 
 namespace Store_Management_System.Controllers
@@ -10,10 +11,11 @@ namespace Store_Management_System.Controllers
     public class SystemSetupController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public SystemSetupController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public SystemSetupController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         public IActionResult Index()
@@ -62,7 +64,7 @@ namespace Store_Management_System.Controllers
 
                 _context.FiscalPeriods.Add(period);
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Create", "FiscalPeriod", period.Id, null, $"Created fiscal period '{period.PeriodName}' from {period.StartDate} to {period.EndDate}.");
                 return Json(new { success = true, message = $"Fiscal period '{period.PeriodName}' created successfully!" });
             }
 
@@ -136,7 +138,7 @@ namespace Store_Management_System.Controllers
 
                 _context.Update(period);
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Edit", "FiscalPeriod", period.Id, null, $"Updated fiscal period '{period.PeriodName}' to start {period.StartDate} and end {period.EndDate}, Closed: {period.IsClosed}.");
                 return Json(new { success = true, message = $"Fiscal period '{period.PeriodName}' updated successfully!" });
             }
 
@@ -166,7 +168,7 @@ namespace Store_Management_System.Controllers
 
             _context.FiscalPeriods.Remove(period);
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("Delete", "FiscalPeriod", period.Id, null, $"Deleted fiscal period '{period.PeriodName}' that started on {period.StartDate} and ended on {period.EndDate}.");
             return Json(new { success = true, message = $"Fiscal period '{period.PeriodName}' deleted successfully!" });
         }
 
@@ -186,7 +188,7 @@ namespace Store_Management_System.Controllers
 
             _context.Update(period);
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("Edit", "FiscalPeriod", period.Id, null, $"Closed fiscal period '{period.PeriodName}' that started on {period.StartDate} and ended on {period.EndDate}.");
             return Json(new { success = true, message = $"Fiscal period '{period.PeriodName}' closed successfully!" });
         }
         // ==================== WAREHOUSES ====================
@@ -307,7 +309,7 @@ namespace Store_Management_System.Controllers
 
                 _context.Warehouses.Add(warehouse);
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Create", "Warehouse", warehouse.Id, null, $"Created warehouse '{warehouse.WarehouseName}' with code '{warehouse.WarehouseCode}'.");
                 return Json(new { success = true, message = $"Warehouse '{warehouse.WarehouseName}' created!" });
             }
 
@@ -358,7 +360,7 @@ namespace Store_Management_System.Controllers
 
                 _context.Update(warehouse);
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Edit", "Warehouse", warehouse.Id, null, $"Updated warehouse '{warehouse.WarehouseName}' with code '{warehouse.WarehouseCode}'.");
                 return Json(new { success = true, message = $"Warehouse '{warehouse.WarehouseName}' updated!" });
             }
 
@@ -383,7 +385,7 @@ namespace Store_Management_System.Controllers
             warehouse.IsActive = false;
             warehouse.UpdatedAt = DateTime.UtcNow;
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("Delete", "Warehouse", warehouse.Id, null, $"Deleted warehouse '{warehouse.WarehouseName}' with code '{warehouse.WarehouseCode}'.");
             return Json(new { success = true, message = $"Warehouse '{warehouse.WarehouseName}' deleted!" });
         }
 

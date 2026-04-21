@@ -3,8 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 using System.Text.Json;
+using Store_Management_System.DTOs;
+using Store_Management_System.Extensions;
 
 namespace Store_Management_System.Controllers
 {
@@ -12,10 +15,11 @@ namespace Store_Management_System.Controllers
     public class CategoriesController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public CategoriesController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public CategoriesController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: Categories
@@ -76,10 +80,9 @@ namespace Store_Management_System.Controllers
                     CreatedAt = DateTime.UtcNow,
                     CreatedBy = GetCurrentUserId()
                 };
+            
 
-                _context.Categories.Add(category);
                 await _context.SaveChangesAsync();
-
                 // Return JSON for AJAX request
                 return Json(new { success = true, message = $"Category '{category.Name}' created successfully!" });
             }
@@ -164,7 +167,6 @@ namespace Store_Management_System.Controllers
 
                 _context.Update(category);
                 await _context.SaveChangesAsync();
-
                 return Json(new { success = true, message = $"Category '{category.Name}' updated successfully!" });
             }
 
@@ -282,7 +284,6 @@ namespace Store_Management_System.Controllers
 
             _context.Update(category);
             await _context.SaveChangesAsync();
-
             return Json(new { success = true, message = $"Category '{category.Name}' has been deleted successfully!" });
         }
         // POST: Categories/Reorder

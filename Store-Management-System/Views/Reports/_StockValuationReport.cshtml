@@ -1,5 +1,5 @@
 ﻿@model List<StockValuationCategoryViewModel>
-
+@Html.AntiForgeryToken()
 @{
     var totalValue = ViewBag.TotalValue ?? 0m;
     var totalQuantity = ViewBag.TotalQuantity ?? 0m;
@@ -12,6 +12,11 @@
         </div>
         <div class="col-md-2">
             <button class="btn btn-primary w-100" id="applyFilterBtn">Apply Filter</button>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-success w-100" id="exportExcelBtn">
+                <i class="align-middle" data-feather="download"></i> Export CSV
+            </button>
         </div>
     </div>
 </div>
@@ -38,7 +43,7 @@
                 <h5 class="card-title mb-0">Valuation by Category</h5>
             </div>
             <div class="card-body p-0">
-                <div class="table-responsive">
+                <div class="table-responsive table-scrollable-sm">
                     <table class="table table-bordered mb-0">
                         <thead class="table-light">
                             <tr>
@@ -68,12 +73,11 @@
                                 <td class="text-end">100%</td>
                             </tr>
                         </tfoot>
-                    </table>
+                  </table>
                 </div>
             </div>
         </div>
     </div>
-
     <div class="col-md-7">
         <div class="card">
             <div class="card-header">
@@ -87,13 +91,32 @@
 </div>
 
 <script>
-    function renderValuationChart() {
-        var ctx = document.getElementById('valuationChart').getContext('2d');
 
+    var valuationChartInstance = null;
+        $('#exportExcelBtn3').on('click', function() {
+        var warehouseId = $('#warehouseFilter').val();
+        var form = $('<form action="@Url.Action("ExportStockValuationToExcel", "Reports")" method="post"></form>');
+        form.append('<input type="hidden" name="warehouseId" value="' + warehouseId + '" />');
+        form.append('@Html.AntiForgeryToken()');
+        $('body').append(form);
+        form.submit();
+        form.remove();
+    });
+    function renderValuationChart() {
+        var canvas = document.getElementById('valuationChart');
+        if (!canvas) return;
+        
+        var ctx = canvas.getContext('2d');
         var categories = @Html.Raw(Json.Serialize(Model.Select(m => m.CategoryName)));
         var values = @Html.Raw(Json.Serialize(Model.Select(m => m.TotalValue)));
-
-        new Chart(ctx, {
+        
+        // Destroy existing chart instance
+        if (valuationChartInstance !== null) {
+            valuationChartInstance.destroy();
+            valuationChartInstance = null;
+        }
+        
+        valuationChartInstance = new Chart(ctx, {
             type: 'bar',
             data: {
                 labels: categories,
@@ -130,22 +153,21 @@
         });
     }
 
-    $('#applyFilterBtn').on('click', function () {
+    $('#applyFilterBtn').on('click', function() {
         var warehouseId = $('#warehouseFilter').val();
-
         $.ajax({
             url: '@Url.Action("StockValuation", "Reports")',
             type: 'GET',
             data: { warehouseId: warehouseId },
-            success: function (response) {
+            success: function(response) {
                 $('#stockValuationContent').html(response);
                 feather.replace();
-                renderValuationChart();
+                // Chart will be rendered by the new partial's ready function
             }
         });
     });
 
-    $(document).ready(function () {
+    $(document).ready(function() {
         renderValuationChart();
     });
 </script>

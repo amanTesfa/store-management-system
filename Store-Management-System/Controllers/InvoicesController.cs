@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.Extensions;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 using System.Text.RegularExpressions;
 
@@ -12,10 +14,11 @@ namespace Store_Management_System.Controllers
     public class InvoicesController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public InvoicesController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public InvoicesController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: Invoices
@@ -136,6 +139,67 @@ namespace Store_Management_System.Controllers
 
             return Json(new { success = true, lines = lines, soNumber = so.VoucherNumber, customerName = so.Consignee?.ConsigneeName });
         }
+        [HttpGet]
+        public async Task<IActionResult> DownloadPdf(int id)
+        {
+            var invoice = await _context.Vouchers
+                .Include(v => v.Consignee)
+                .Include(v => v.VoucherLines)
+                    .ThenInclude(l => l.Article)
+                .FirstOrDefaultAsync(v => v.Id == id && v.VoucherType == "INV");
+
+            if (invoice == null)
+                return NotFound();
+
+            var so = await _context.Vouchers
+                .FirstOrDefaultAsync(v => v.Id == invoice.OriginalVoucherId);
+
+            var pdfService = new PdfInvoiceService();
+            var pdfBytes = pdfService.GenerateInvoice(invoice, so, invoice.Consignee, invoice.VoucherLines.ToList());
+
+            return File(pdfBytes, "application/pdf", $"Invoice_{invoice.VoucherNumber}.pdf");
+        }
+        [HttpGet]
+        public async Task<IActionResult> Print(int id)
+        {
+            var invoice = await _context.Vouchers
+                .Include(v => v.Consignee)
+                .Include(v => v.VoucherLines)
+                    .ThenInclude(l => l.Article)
+                .FirstOrDefaultAsync(v => v.Id == id && v.VoucherType == "INV");
+
+            if (invoice == null)
+                return NotFound();
+
+            var so = await _context.Vouchers
+                .FirstOrDefaultAsync(v => v.Id == invoice.OriginalVoucherId);
+
+            ViewBag.SONumber = so?.VoucherNumber ?? "N/A";
+
+            return View(invoice);
+        }
+        [HttpGet]
+        public async Task<IActionResult> ViewPdf(int id)
+        {
+            var invoice = await _context.Vouchers
+                .Include(v => v.Consignee)
+                .Include(v => v.VoucherLines)
+                    .ThenInclude(l => l.Article)
+                .FirstOrDefaultAsync(v => v.Id == id && v.VoucherType == "INV");
+
+            if (invoice == null)
+                return NotFound();
+
+            var so = await _context.Vouchers
+                .FirstOrDefaultAsync(v => v.Id == invoice.OriginalVoucherId);
+
+            var pdfService = new PdfInvoiceService();
+            var pdfBytes = pdfService.GenerateInvoice(invoice, so, invoice.Consignee, invoice.VoucherLines.ToList());
+
+            // Return PDF directly in browser (not as download)
+            Response.Headers.Add("Content-Disposition", "inline; filename=Invoice_" + invoice.VoucherNumber + ".pdf");
+            return File(pdfBytes, "application/pdf");
+        }
         // POST: Invoices/Create
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -210,10 +274,10 @@ namespace Store_Management_System.Controllers
                         };
                         _context.VoucherLines.Add(invoiceLine);
                     }
-
+                    var invoiceDto = invoice.ToInvoiceDto();
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
-
+                    await _activityLogService.LogAsync("Create", "Invoice", invoiceDto.Id, null, invoiceDto.VoucherNumber, $"Created invoice from SO {so.VoucherNumber}");
                     TempData["SuccessMessage"] = $"Invoice {invoice.VoucherNumber} created successfully!";
                     return RedirectToAction(nameof(Index));
                 }
@@ -276,9 +340,9 @@ namespace Store_Management_System.Controllers
             {
                 customer.CurrentBalance -= invoice.TotalAmount;
             }
-
+            var invoiceDto = invoice.ToInvoiceDto();
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("Update", "Invoice", invoiceDto.Id, "Posted", "Paid", $"Marked invoice {invoiceDto.VoucherNumber} as paid with reference: {paymentReference}");
             return Json(new { success = true, message = $"Invoice {invoice.VoucherNumber} marked as paid!" });
         }
         // POST: Invoices/Cancel/5
@@ -298,9 +362,9 @@ namespace Store_Management_System.Controllers
             invoice.Status = "Cancelled";
             invoice.Remarks = (invoice.Remarks != null ? invoice.Remarks + " | " : "") + $"Cancelled: {reason}";
             invoice.UpdatedAt = DateTime.UtcNow;
-
+            var invoiceDto = invoice.ToInvoiceDto();
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("Update", "Invoice", invoiceDto.Id, invoiceDto.Status, "Cancelled", $"Cancelled invoice {invoiceDto.VoucherNumber} with reason: {reason}");
             return Json(new { success = true, message = $"Invoice {invoice.VoucherNumber} cancelled!" });
         }
 

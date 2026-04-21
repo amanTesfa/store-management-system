@@ -31,7 +31,7 @@
         </div>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
+        <div class="table-responsive table-scrollable">
             <table class="table table-hover">
                 <thead>
                     <tr>
@@ -133,7 +133,15 @@
         var currentPage = @Model.CurrentPage;
         var searchTerm = '@Model.SearchTerm';
         var status = '@Model.Status';
+                function showConfirm(message, onConfirm) {
+            $('#confirmModalMessage').text(message);
+            $('#confirmModal').modal('show');
 
+            $('#confirmModalOk').off('click').on('click', function () {
+                $('#confirmModal').modal('hide');
+                if (onConfirm) onConfirm();
+            });
+        }
         function refreshPage() {
             var url = '@Url.Action("Index", "BeginningBalance")?searchTerm=' + encodeURIComponent(searchTerm) + '&status=' + encodeURIComponent(status) + '&page=' + currentPage;
             window.location.href = url;
@@ -146,49 +154,82 @@
         $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); } });
         $('#statusFilter').on('change', function() { status = $(this).val(); currentPage = 1; refreshPage(); });
 
-        function approveBalance(id) {
-            if (confirm('Approve this beginning balance? Once approved, it can be posted to inventory.')) {
+                function approveBalance(id) {
+            showConfirm('Approve this beginning balance? Once approved, it can be posted to inventory.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
                     url: '@Url.Action("Approve", "BeginningBalance")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
                     }
                 });
-            }
+            });
         }
 
         function postBalance(id) {
-            if (confirm('Post this beginning balance to inventory? This will update stock levels and cannot be undone.')) {
+            showConfirm('Post this beginning balance to inventory? This will update stock levels and cannot be undone.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
                     url: '@Url.Action("Post", "BeginningBalance")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
                     }
                 });
-            }
+            });
         }
 
         function deleteBalance(id, number) {
-            if (confirm('Delete beginning balance ' + number + '? This action cannot be undone.')) {
+            showConfirm('Delete beginning balance ' + number + '? This action cannot be undone.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
                     url: '@Url.Action("Delete", "BeginningBalance")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
                     }
                 });
-            }
+            });
         }
 
         function showToast(type, message) {

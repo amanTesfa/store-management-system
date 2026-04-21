@@ -16,6 +16,7 @@
                 <h5 class="card-title mb-0">Receipt Information</h5>
             </div>
             <div class="card-body">
+                <div class="table-responsive table-scrollable">
                 <table class="table table-bordered">
                     <tr>
                         <th style="width: 35%">GRN Number</th>
@@ -42,6 +43,7 @@
                         <td>@(Model.Remarks ?? "N/A")</td>
                     </tr>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -52,6 +54,7 @@
                 <h5 class="card-title mb-0">Summary</h5>
             </div>
             <div class="card-body">
+                <div class="table-responsive table-scrollable">
                 <table class="table table-bordered">
                     <tr>
                         <th style="width: 50%">Total Items</th>
@@ -62,6 +65,7 @@
                         <td class="text-end fw-bold text-success">@Model.TotalAmount.ToString("C")</td>
                     </tr>
                 </table>
+                </div>
             </div>
         </div>
     </div>
@@ -72,7 +76,7 @@
         <h5 class="card-title mb-0">Received Items</h5>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="table-responsive table-scrollable">
             <table class="table table-bordered mb-0">
                 <thead class="table-light">
                     <tr>

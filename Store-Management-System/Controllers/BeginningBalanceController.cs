@@ -2,7 +2,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.Extensions;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -13,10 +15,11 @@ namespace Store_Management_System.Controllers
     public class BeginningBalanceController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public BeginningBalanceController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public BeginningBalanceController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: BeginningBalance
@@ -199,8 +202,10 @@ namespace Store_Management_System.Controllers
                     };
                     _context.BeginningBalanceLines.Add(balanceLine);
                 }
-
+                var balanceDto = balance.ToDto();
                 await _context.SaveChangesAsync();
+                await _activityLogService.LogAsync("Create", "BeginningBalance", balance.Id, null,
+    JsonSerializer.Serialize(balanceDto), $"Created beginning balance: {balanceDto.BalanceNumber}");
 
                 TempData["SuccessMessage"] = $"Beginning balance {balance.BalanceNumber} created successfully!";
                 return RedirectToAction(nameof(Index));
@@ -407,9 +412,11 @@ namespace Store_Management_System.Controllers
                     };
                     _context.BeginningBalanceLines.Add(balanceLine);
                 }
-
+                var balanceDto = balance.ToDto();
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Edit", "BeginningBalance", balance.Id,
+                JsonSerializer.Serialize(balanceDto), JsonSerializer.Serialize(balanceDto),
+                $"Updated beginning balance: {balanceDto.BalanceNumber}");
                 TempData["SuccessMessage"] = $"Beginning balance {balance.BalanceNumber} updated successfully!";
                 return RedirectToAction(nameof(Index));
             }
@@ -441,8 +448,11 @@ namespace Store_Management_System.Controllers
             balance.ApprovedBy = GetCurrentUserId();
             balance.ApprovalComments = comments;
             balance.UpdatedAt = DateTime.UtcNow;
-
+            var balanceDto = balance.ToDto();
             await _context.SaveChangesAsync();
+            await _activityLogService.LogAsync("Approve", "BeginningBalance", balance.Id,
+                JsonSerializer.Serialize(balanceDto), JsonSerializer.Serialize(balanceDto),
+                $"Approved beginning balance: {balance.BalanceNumber}");
 
             return Json(new { success = true, message = $"Balance {balance.BalanceNumber} approved successfully!" });
         }
@@ -550,8 +560,12 @@ namespace Store_Management_System.Controllers
                 balance.UpdatedAt = DateTime.UtcNow;
 
                 _context.Update(balance);
+                var balanceDto = balance.ToDto();
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
+                await _activityLogService.LogAsync("Post", "BeginningBalance", balance.Id,
+    JsonSerializer.Serialize(balanceDto), JsonSerializer.Serialize(balanceDto),
+    $"Posted beginning balance: {balance.BalanceNumber}");
 
                 return Json(new { success = true, message = $"Balance {balance.BalanceNumber} posted to inventory successfully!" });
             }
@@ -583,9 +597,11 @@ namespace Store_Management_System.Controllers
 
             _context.BeginningBalanceLines.RemoveRange(balance.BeginningBalanceLines);
             _context.BeginningBalances.Remove(balance);
+            var balanceDto = balance.ToDto();
             await _context.SaveChangesAsync();
-
-            return Json(new { success = true, message = $"Balance {balance.BalanceNumber} deleted successfully!" });
+            await _activityLogService.LogAsync("Delete", "BeginningBalance", id, null, null,
+            $"Deleted beginning balance: {balanceDto.BalanceNumber}");
+            return Json(new { success = true, message = $"Balance {balanceDto.BalanceNumber} deleted successfully!" });
         }
 
         // GET: BeginningBalance/GetProductDetails

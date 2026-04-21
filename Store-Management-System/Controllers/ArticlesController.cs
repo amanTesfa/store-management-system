@@ -2,8 +2,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.DTOs;
+using Store_Management_System.Extensions;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Store_Management_System.Controllers
@@ -12,10 +16,11 @@ namespace Store_Management_System.Controllers
     public class ArticlesController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public ArticlesController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public ArticlesController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: Articles
@@ -25,6 +30,11 @@ namespace Store_Management_System.Controllers
                 .Include(a => a.ArticleCategoryNavigation)
                 .Where(a => a.IsActive)
                 .AsQueryable();
+            // Get stock levels from CurrentStock table
+            var stockLevels = await _context.CurrentStocks
+                .GroupBy(cs => cs.ArticleId)
+                .Select(g => new { ArticleId = g.Key, TotalStock = g.Sum(cs => cs.Quantity) })
+                .ToDictionaryAsync(k => k.ArticleId, v => v.TotalStock);
 
             // Apply filters
             if (!string.IsNullOrWhiteSpace(searchTerm))
@@ -53,7 +63,7 @@ namespace Store_Management_System.Controllers
                     Description = a.Description,
                     CategoryName = a.ArticleCategoryNavigation != null ? a.ArticleCategoryNavigation.Name : null,
                     StandardPrice = a.StandardPrice,
-                    CurrentStock = 0,
+                    CurrentStock = stockLevels.ContainsKey(a.Id) ? (int)stockLevels[a.Id] : 0, 
                     IsActive = a.IsActive
                 })
                 .ToListAsync();
@@ -202,6 +212,10 @@ namespace Store_Management_System.Controllers
                 }
 
                 await _context.SaveChangesAsync();
+                var articleDto = article.ToDto();
+                await _activityLogService.LogAsync("Create", "Article", article.Id, null,
+                    
+    JsonSerializer.Serialize(articleDto), $"Created article: {article.ArticleName}");
 
                 TempData["SuccessMessage"] = $"Article '{article.ArticleName}' has been created successfully!";
                 return RedirectToAction(nameof(Index));
@@ -354,7 +368,10 @@ namespace Store_Management_System.Controllers
                 }
 
                 await _context.SaveChangesAsync();
-
+                var articleDto = article.ToDto();       
+                await _activityLogService.LogAsync("Edit", "Article", article.Id,null,
+    JsonSerializer.Serialize(articleDto), 
+    $"Updated article: {article.ArticleName}");
                 TempData["SuccessMessage"] = $"Article '{article.ArticleName}' has been updated successfully!";
                 return RedirectToAction(nameof(Index));
             }
@@ -375,19 +392,39 @@ namespace Store_Management_System.Controllers
                 return NotFound();
             }
 
-            // Get recent stock movements (if you have StockMovements table)
+            // Get current stock from CurrentStock table
+            var currentStock = await _context.CurrentStocks
+                .Where(cs => cs.ArticleId == id)
+                .SumAsync(cs => cs.Quantity);
+
+            // Get recent stock movements
             var recentMovements = await _context.StockMovements
+                .Include(s => s.Warehouse)
                 .Where(s => s.ArticleId == id)
                 .OrderByDescending(s => s.MovementDate)
                 .Take(10)
+                .Select(s => new RecentStockMovementViewModel
+                {
+                    MovementDate = s.MovementDate,
+                    MovementType = s.MovementType,
+                    Quantity = (int)s.Quantity,
+                    UnitCost = s.UnitCost,
+                    Reference = s.ReferenceNumber ?? s.MovementNumber,
+                    WarehouseName = s.Warehouse != null ? s.Warehouse.WarehouseName : "N/A"
+                })
                 .ToListAsync();
 
             var primaryBarcode = article.ArticleBarcodes?.FirstOrDefault(b => b.IsPrimary);
             var additionalBarcodes = article.ArticleBarcodes?.Where(b => !b.IsPrimary).ToList();
 
+            // Add current stock to ViewBag or create a ViewModel
+            ViewBag.CurrentStock = (int)currentStock;
             ViewBag.RecentMovements = recentMovements;
             ViewBag.PrimaryBarcode = primaryBarcode;
             ViewBag.AdditionalBarcodes = additionalBarcodes;
+            ViewBag.ReorderLevel = article.ReorderLevel;
+            ViewBag.MaxStockLevel = article.MaxStockLevel;
+            ViewBag.SafetyStock = article.SafetyStock;
 
             return View(article);
         }
@@ -420,7 +457,8 @@ namespace Store_Management_System.Controllers
                     article.UpdatedAt = DateTime.UtcNow;
                     _context.Update(article);
                     await _context.SaveChangesAsync();
-
+                    await _activityLogService.LogAsync("Delete", "Article", id, null, null,
+    $"Deleted article: {article.ArticleName}");
                     return Json(new { success = true, message = $"Article '{article.ArticleName}' has been deleted successfully!" });
                 }
 

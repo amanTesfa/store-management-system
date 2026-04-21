@@ -2,8 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.Extensions;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Store_Management_System.Controllers
@@ -12,10 +15,11 @@ namespace Store_Management_System.Controllers
     public class SalesOrdersController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public SalesOrdersController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public SalesOrdersController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: SalesOrders
@@ -207,8 +211,17 @@ namespace Store_Management_System.Controllers
                     };
                     _context.VoucherLines.Add(voucherLine);
                 }
-
+                var soDto = voucher.ToSalesOrderDto();
                 await _context.SaveChangesAsync();
+
+                await _activityLogService.LogAsync(
+                    "Create",                           // action
+                    "SalesOrder",                       // entityType
+                    voucher.Id,                         // entityId
+                    null,                               // oldValue
+                    JsonSerializer.Serialize(soDto),    // newValue
+                    $"Created Sales Order {voucher.VoucherNumber} with {validLines.Count} lines."  // details
+                );
 
                 TempData["SuccessMessage"] = $"Sales Order {voucher.VoucherNumber} created successfully!";
                 return RedirectToAction(nameof(Index));
@@ -278,6 +291,8 @@ namespace Store_Management_System.Controllers
             var voucher = await _context.Vouchers
                 .Include(v => v.VoucherLines)
                 .FirstOrDefaultAsync(v => v.Id == id && v.VoucherType == "SO");
+            // Capture OLD state BEFORE any changes
+            var oldVoucherDto = voucher.ToSalesOrderDto();
 
             if (voucher == null || voucher.Status != "Draft")
             {
@@ -347,8 +362,19 @@ namespace Store_Management_System.Controllers
                     };
                     _context.VoucherLines.Add(voucherLine);
                 }
-
                 await _context.SaveChangesAsync();
+
+                // Create DTO for logging
+                var soDto = voucher.ToSalesOrderDto();
+
+                await _activityLogService.LogAsync(
+                    "Edit",                             // action
+                    "SalesOrder",                       // entityType
+                    voucher.Id,                         // entityId
+                    JsonSerializer.Serialize(oldVoucherDto),  // oldValue (previous state - you need to capture before edit)
+                    JsonSerializer.Serialize(soDto),    // newValue (current state)
+                    $"Edited Sales Order {voucher.VoucherNumber} with {validLines.Count} lines."  // details
+                );
 
                 TempData["SuccessMessage"] = $"Sales Order {voucher.VoucherNumber} updated successfully!";
                 return RedirectToAction(nameof(Index));
@@ -394,8 +420,19 @@ namespace Store_Management_System.Controllers
             voucher.ApprovedBy = GetCurrentUserId();
             voucher.ApprovalComments = comments;
             voucher.UpdatedAt = DateTime.UtcNow;
-
             await _context.SaveChangesAsync();
+
+            // Create DTO for logging
+            var soDto = voucher.ToSalesOrderDto();
+
+            await _activityLogService.LogAsync(
+                "Approve",                          // action
+                "SalesOrder",                       // entityType
+                voucher.Id,                         // entityId
+                null,                               // oldValue (no previous state needed)
+                JsonSerializer.Serialize(soDto),    // newValue (current state after approval)
+                $"Approved Sales Order {voucher.VoucherNumber}. Comments: {comments}"  // details
+            );
 
             return Json(new { success = true, message = $"Sales Order {voucher.VoucherNumber} approved and stock reserved!" });
         }
@@ -419,6 +456,18 @@ namespace Store_Management_System.Controllers
             voucher.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            // Create DTO for logging
+            var soDto = voucher.ToSalesOrderDto();
+
+            await _activityLogService.LogAsync(
+                "Ship",                             // action
+                "SalesOrder",                       // entityType
+                voucher.Id,                         // entityId
+                null,                               // oldValue (no previous state needed)
+                JsonSerializer.Serialize(soDto),    // newValue (current state after shipping)
+                $"Shipped Sales Order {voucher.VoucherNumber}"  // details
+            );
 
             return Json(new { success = true, message = $"Sales Order {voucher.VoucherNumber} marked as shipped!" });
         }
@@ -477,6 +526,18 @@ namespace Store_Management_System.Controllers
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
+                // Create DTO for logging
+                var soDto = voucher.ToSalesOrderDto();
+
+                await _activityLogService.LogAsync(
+                    "Complete",                         // action
+                    "SalesOrder",                       // entityType
+                    voucher.Id,                         // entityId
+                    null,                               // oldValue (no previous state needed)
+                    JsonSerializer.Serialize(soDto),    // newValue (current state after completion)
+                    $"Completed Sales Order {voucher.VoucherNumber}"  // details
+                );
+
                 return Json(new { success = true, message = $"Sales Order {voucher.VoucherNumber} completed successfully!" });
             }
             catch (Exception ex)
@@ -515,6 +576,18 @@ namespace Store_Management_System.Controllers
             voucher.UpdatedAt = DateTime.UtcNow;
 
             await _context.SaveChangesAsync();
+
+            // Create DTO for logging
+            var soDto = voucher.ToSalesOrderDto();
+
+            await _activityLogService.LogAsync(
+                "Cancel",                           // action
+                "SalesOrder",                       // entityType
+                voucher.Id,                         // entityId
+                null,                               // oldValue (no previous state needed)
+                JsonSerializer.Serialize(soDto),    // newValue (current state after cancellation)
+                $"Cancelled Sales Order {voucher.VoucherNumber}. Reason: {reason}"  // details
+            );
 
             return Json(new { success = true, message = $"Sales Order {voucher.VoucherNumber} cancelled!" });
         }

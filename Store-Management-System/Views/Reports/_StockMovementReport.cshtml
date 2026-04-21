@@ -1,5 +1,5 @@
 ﻿@model List<StockMovementReportViewModel>
-
+@Html.AntiForgeryToken()
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="row g-2 w-100">
         <div class="col-md-2">
@@ -18,14 +18,14 @@
             <button class="btn btn-primary w-100" id="applyFilterBtn">Apply</button>
         </div>
         <div class="col-md-2">
-            <button class="btn btn-success w-100" id="exportExcelBtn">
-                <i class="align-middle" data-feather="download"></i> Export
+            <button class="btn btn-success w-100" id="exportExcelBtn2">
+                <i class="align-middle" data-feather="download"></i> Export CSV
             </button>
         </div>
     </div>
 </div>
 
-<div class="table-responsive">
+<div class="table-responsive table-scrollable">
     <table class="table table-bordered table-hover datatable">
         <thead class="table-light">
             <tr>
@@ -94,18 +94,20 @@
         });
     });
 
-    $('#exportExcelBtn').on('click', function () {
+        $('#exportExcelBtn2').on('click', function () {
+
         var fromDate = $('#fromDate').val();
         var toDate = $('#toDate').val();
         var articleId = $('#articleFilter').val();
         var movementType = $('#movementTypeFilter').val();
-
         var form = $('<form action="@Url.Action("ExportStockMovementToExcel", "Reports")" method="post"></form>');
         form.append('<input type="hidden" name="fromDate" value="' + fromDate + '" />');
         form.append('<input type="hidden" name="toDate" value="' + toDate + '" />');
         form.append('<input type="hidden" name="articleId" value="' + articleId + '" />');
         form.append('<input type="hidden" name="movementType" value="' + movementType + '" />');
-        form.append('@Html.AntiForgeryToken()');
+        form.append('<input type="hidden" name="__RequestVerificationToken" value="' + $('input[name="__RequestVerificationToken"]').val() + '" />');
+
+        console.log('Form created, submitting...');  // Add this debug line
 
         $('body').append(form);
         form.submit();

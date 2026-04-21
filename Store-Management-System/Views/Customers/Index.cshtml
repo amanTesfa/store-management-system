@@ -114,21 +114,59 @@
 
 @section Scripts {
     <script>
+        function showConfirm(message, onConfirm) {
+            $('#confirmModalMessage').text(message);
+            $('#confirmModal').modal('show');
+
+            $('#confirmModalOk').off('click').on('click', function () {
+                $('#confirmModal').modal('hide');
+                if (onConfirm) onConfirm();
+            });
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+
+            var toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 1100;">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="align-middle me-2" data-feather="${icon}"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+
+            setTimeout(() => {
+                $('.toast').last().remove();
+            }, 3000);
+        }
+
         var currentPage = @Model.CurrentPage;
         var searchTerm = '@Model.SearchTerm';
         var customerType = '@Model.CustomerType';
 
         // Load customer details into right panel
         function loadCustomerDetails(id) {
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("DetailsPartial", "Customers")',
                 type: 'GET',
                 data: { id: id },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     $('#formPanel').html(response);
                     feather.replace();
                 },
                 error: function() {
+                    $('#loadingSpinner').fadeOut(200);
                     showToast('error', 'Error loading customer details.');
                 }
             });
@@ -136,15 +174,18 @@
 
         // Load create form
         function loadCreateForm() {
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("CreatePartial", "Customers")',
                 type: 'GET',
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     $('#formPanel').html(response);
                     feather.replace();
                     initializeCustomerTypeToggle();
                 },
                 error: function() {
+                    $('#loadingSpinner').fadeOut(200);
                     showToast('error', 'Error loading create form.');
                 }
             });
@@ -152,16 +193,19 @@
 
         // Load edit form
         function loadEditForm(id) {
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("EditPartial", "Customers")',
                 type: 'GET',
                 data: { id: id },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     $('#formPanel').html(response);
                     feather.replace();
                     initializeCustomerTypeToggle();
                 },
                 error: function() {
+                    $('#loadingSpinner').fadeOut(200);
                     showToast('error', 'Error loading edit form.');
                 }
             });
@@ -198,6 +242,7 @@
             var formData = $('#createCustomerForm').serialize();
             var token = $('input[name="__RequestVerificationToken"]').val();
 
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("Create", "Customers")',
                 type: 'POST',
@@ -206,6 +251,7 @@
                     'RequestVerificationToken': token
                 },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     if (response.success) {
                         showToast('success', response.message);
                         refreshCustomerList();
@@ -215,6 +261,7 @@
                     }
                 },
                 error: function(xhr) {
+                    $('#loadingSpinner').fadeOut(200);
                     console.error('Error:', xhr);
                     showToast('error', 'An error occurred. Please try again.');
                 }
@@ -226,6 +273,7 @@
             var formData = $('#editCustomerForm').serialize();
             var token = $('input[name="__RequestVerificationToken"]').val();
 
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("Edit", "Customers")',
                 type: 'POST',
@@ -234,6 +282,7 @@
                     'RequestVerificationToken': token
                 },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     if (response.success) {
                         showToast('success', response.message);
                         refreshCustomerList();
@@ -243,15 +292,17 @@
                     }
                 },
                 error: function(xhr) {
+                    $('#loadingSpinner').fadeOut(200);
                     console.error('Error:', xhr);
                     showToast('error', 'An error occurred. Please try again.');
                 }
             });
         }
 
-        // Delete customer
+        // Delete customer - UPDATED with showConfirm
         function deleteCustomer(id, name) {
-            if (confirm(`Are you sure you want to delete customer "${name}"? This action cannot be undone.`)) {
+            showConfirm(`Are you sure you want to delete customer "${name}"? This action cannot be undone.`, function() {
+                $('#loadingSpinner').fadeIn(200);
                 var token = $('input[name="__RequestVerificationToken"]').val();
 
                 $.ajax({
@@ -262,6 +313,7 @@
                         __RequestVerificationToken: token
                     },
                     success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
                         if (response.success) {
                             showToast('success', response.message);
                             refreshCustomerList();
@@ -271,10 +323,11 @@
                         }
                     },
                     error: function() {
+                        $('#loadingSpinner').fadeOut(200);
                         showToast('error', 'Error deleting customer.');
                     }
                 });
-            }
+            });
         }
 
         // Refresh customer list
@@ -312,50 +365,27 @@
             refreshCustomerList();
         }
 
-        // Toast notification
-        function showToast(type, message) {
-            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
-            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
-
-            var toastHtml = `
-                <div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 1100;">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="align-middle me-2" data-feather="${icon}"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-
-            $('body').append(toastHtml);
-            var toast = new bootstrap.Toast($('.toast').last());
-            toast.show();
-
-            setTimeout(() => {
-                $('.toast').last().remove();
-            }, 3000);
-        }
-
-        $(document).ready(function() {
-            feather.replace();
-        });
-
-                // Load customer statement
+        // Load customer statement
         function loadCustomerStatement(id) {
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("StatementPartial", "Customers")',
                 type: 'GET',
                 data: { id: id },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     $('#formPanel').html(response);
                     feather.replace();
                 },
                 error: function() {
+                    $('#loadingSpinner').fadeOut(200);
                     showToast('error', 'Error loading customer statement.');
                 }
             });
         }
+
+        $(document).ready(function() {
+            feather.replace();
+        });
     </script>
 }

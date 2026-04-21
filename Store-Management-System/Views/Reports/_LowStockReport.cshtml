@@ -1,5 +1,5 @@
 ﻿@model List<LowStockReportViewModel>
-
+@Html.AntiForgeryToken()
 <div class="d-flex justify-content-between align-items-center mb-3">
     <div class="row g-2 w-100">
         <div class="col-md-3">
@@ -10,7 +10,7 @@
         </div>
         <div class="col-md-2">
             <button class="btn btn-success w-100" id="exportExcelBtn">
-                <i class="align-middle" data-feather="download"></i> Export to Excel
+                <i class="align-middle" data-feather="download"></i> Export CSV
             </button>
         </div>
     </div>
@@ -24,7 +24,7 @@
 }
 else
 {
-    <div class="table-responsive">
+    <div class="table-responsive table-scrollable">
         <table class="table table-bordered table-hover datatable">
             <thead class="table-light">
                 <tr>

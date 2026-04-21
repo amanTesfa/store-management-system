@@ -2,8 +2,11 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.Extensions;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace Store_Management_System.Controllers
@@ -12,9 +15,11 @@ namespace Store_Management_System.Controllers
     public class ReturnsController : Controller
     {
         private readonly InventoryDbContext _context;
+        private readonly ActivityLogService _activityLogService;
 
-        public ReturnsController(InventoryDbContext context)
+        public ReturnsController(InventoryDbContext context,ActivityLogService activityLogService)
         {
+            _activityLogService = activityLogService;
             _context = context;
         }
 
@@ -279,8 +284,14 @@ namespace Store_Management_System.Controllers
                         };
                         _context.StockMovements.Add(stockMovement);
                     }
+                    var returnDto = returnVoucher.ToReturnDto();
                     await _context.SaveChangesAsync();
                     await transaction.CommitAsync();
+
+                    // Use returnVoucher.Id (which now has the generated ID)
+                    await _activityLogService.LogAsync("Create", "ReturnVoucher", returnVoucher.Id, null,
+                    JsonSerializer.Serialize(returnDto),
+                    $"Created return voucher: {returnVoucher.VoucherNumber}");
 
                     TempData["SuccessMessage"] = $"Return {returnVoucher.VoucherNumber} created successfully!";
                     return RedirectToAction("Index", "GoodsReceipts");

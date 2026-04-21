@@ -23,7 +23,182 @@ namespace Store_Management_System.Controllers
         {
             return View();
         }
+        // POST: Reports/ExportCurrentStockToExcel
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExportCurrentStockToExcel(int? warehouseId = null, int? categoryId = null)
+        {
+            var query = _context.CurrentStocks
+                .Include(cs => cs.Article)
+                    .ThenInclude(a => a.ArticleCategoryNavigation)
+                .Include(cs => cs.Warehouse)
+                .Where(cs => cs.Quantity > 0)
+                .AsQueryable();
 
+            if (warehouseId.HasValue && warehouseId > 0)
+                query = query.Where(cs => cs.WarehouseId == warehouseId);
+            if (categoryId.HasValue && categoryId > 0)
+                query = query.Where(cs => cs.Article.ArticleCategory == categoryId);
+
+            var data = await query
+                .Select(cs => new
+                {
+                    cs.Article.ArticleCode,
+                    cs.Article.ArticleName,
+                    Category = cs.Article.ArticleCategoryNavigation != null ? cs.Article.ArticleCategoryNavigation.Name : "Uncategorized",
+                    Warehouse = cs.Warehouse.WarehouseName,
+                    cs.Quantity,
+                    UnitCost = cs.Article.StandardCost,
+                    TotalValue = cs.Article.StandardCost * cs.Quantity
+                })
+                .ToListAsync();
+
+            var csv = new StringBuilder();
+            csv.AppendLine("SKU,Product Name,Category,Warehouse,Quantity,Unit Cost,Total Value");
+            foreach (var item in data)
+            {
+                csv.AppendLine($"\"{item.ArticleCode}\",\"{item.ArticleName}\",\"{item.Category}\",\"{item.Warehouse}\",{item.Quantity},{item.UnitCost:F2},{item.TotalValue:F2}");
+            }
+
+            return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"CurrentStock_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        }
+
+        // POST: Reports/ExportLowStockToExcel
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExportLowStockToExcel(int? warehouseId = null)
+        {
+            // Get stock levels from CurrentStock table
+            var stockLevels = await _context.CurrentStocks
+                .GroupBy(cs => cs.ArticleId)
+                .Select(g => new { ArticleId = g.Key, TotalStock = g.Sum(cs => cs.Quantity) })
+                .ToDictionaryAsync(k => k.ArticleId, v => v.TotalStock);
+
+            var query = _context.Articles
+                .Include(a => a.ArticleCategoryNavigation)
+                .Where(a => a.IsActive)
+                .AsQueryable();
+
+            if (warehouseId.HasValue && warehouseId > 0)
+            {
+                var stockQuery = _context.CurrentStocks
+                    .Where(cs => cs.WarehouseId == warehouseId && cs.Quantity > 0)
+                    .Select(cs => cs.ArticleId);
+                query = query.Where(a => stockQuery.Contains(a.Id));
+            }
+
+            var articles = await query.ToListAsync();
+
+            var data = articles
+                .Select(a => new
+                {
+                    a.ArticleCode,
+                    a.ArticleName,
+                    Category = a.ArticleCategoryNavigation != null ? a.ArticleCategoryNavigation.Name : "Uncategorized",
+                    CurrentStock = stockLevels.ContainsKey(a.Id) ? (int)stockLevels[a.Id] : 0,
+                    a.ReorderLevel,
+                    Shortage = (int)(a.ReorderLevel - (stockLevels.ContainsKey(a.Id) ? stockLevels[a.Id] : 0)),
+                    a.StandardPrice
+                })
+                .Where(a => a.CurrentStock <= a.ReorderLevel)
+                .ToList();
+
+            var csv = new StringBuilder();
+            csv.AppendLine("SKU,Product Name,Category,Current Stock,Reorder Level,Shortage,Unit Price");
+            foreach (var item in data)
+            {
+                csv.AppendLine($"\"{item.ArticleCode}\",\"{item.ArticleName}\",\"{item.Category}\",{item.CurrentStock},{item.ReorderLevel},{item.Shortage},{item.StandardPrice:F2}");
+            }
+
+            return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"LowStock_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        }
+
+        // POST: Reports/ExportStockMovementToExcel
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExportStockMovementToExcel(DateTime? fromDate = null, DateTime? toDate = null,
+            int? articleId = null, string? movementType = null)
+        {
+            if (!fromDate.HasValue) fromDate = DateTime.UtcNow.AddMonths(-1);
+            if (!toDate.HasValue) toDate = DateTime.UtcNow;
+
+            var query = _context.StockMovements
+                .Include(s => s.Article)
+                .Include(s => s.Warehouse)
+                .Where(s => s.MovementDate >= fromDate && s.MovementDate <= toDate)
+                .AsQueryable();
+
+            if (articleId.HasValue && articleId > 0)
+                query = query.Where(s => s.ArticleId == articleId);
+            if (!string.IsNullOrEmpty(movementType))
+                query = query.Where(s => s.MovementType == movementType);
+
+            var data = await query
+                .OrderByDescending(s => s.MovementDate)
+                .Select(s => new
+                {
+                    s.MovementDate,
+                    s.MovementNumber,
+                    s.Article.ArticleCode,
+                    s.Article.ArticleName,
+                    s.MovementType,
+                    s.Quantity,
+                    s.UnitCost,
+                    TotalCost = s.Quantity * s.UnitCost,
+                    s.ReferenceNumber,
+                    WarehouseName = s.Warehouse != null ? s.Warehouse.WarehouseName : "N/A"
+                })
+                .ToListAsync();
+
+            var csv = new StringBuilder();
+            csv.AppendLine("Date,Reference,SKU,Product Name,Movement Type,Quantity,Unit Cost,Total Cost,Warehouse,PO/Reference");
+            foreach (var item in data)
+            {
+                csv.AppendLine($"{item.MovementDate:yyyy-MM-dd},\"{item.MovementNumber}\",\"{item.ArticleCode}\",\"{item.ArticleName}\",\"{item.MovementType}\",{item.Quantity},{item.UnitCost:F2},{item.TotalCost:F2},\"{item.WarehouseName}\",\"{item.ReferenceNumber}\"");
+            }
+
+            return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"StockMovement_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        }
+        // POST: Reports/ExportStockValuationToExcel
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> ExportStockValuationToExcel(int? warehouseId = null)
+        {
+            var query = _context.CurrentStocks
+                .Include(cs => cs.Article)
+                    .ThenInclude(a => a.ArticleCategoryNavigation)
+                .Include(cs => cs.Warehouse)
+                .Where(cs => cs.Quantity > 0)
+                .AsQueryable();
+
+            if (warehouseId.HasValue && warehouseId > 0)
+                query = query.Where(cs => cs.WarehouseId == warehouseId);
+
+            var valuation = await query
+                .GroupBy(cs => new { cs.Article.ArticleCategory, CategoryName = cs.Article.ArticleCategoryNavigation != null ? cs.Article.ArticleCategoryNavigation.Name : "Uncategorized" })
+                .Select(g => new
+                {
+                    CategoryName = g.Key.CategoryName,
+                    TotalQuantity = g.Sum(cs => cs.Quantity),
+                    TotalValue = g.Sum(cs => cs.Article.StandardCost * cs.Quantity)
+                })
+                .OrderByDescending(v => v.TotalValue)
+                .ToListAsync();
+
+            var csv = new StringBuilder();
+            csv.AppendLine("Category,Total Quantity,Total Value");
+            foreach (var item in valuation)
+            {
+                csv.AppendLine($"\"{item.CategoryName}\",{item.TotalQuantity:N0},{item.TotalValue:F2}");
+            }
+
+            // Add summary row
+            var totalValue = valuation.Sum(v => v.TotalValue);
+            var totalQuantity = valuation.Sum(v => v.TotalQuantity);
+            csv.AppendLine($"\"TOTAL\",{totalQuantity:N0},{totalValue:F2}");
+
+            return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"StockValuation_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
+        }
         // GET: Reports/CurrentStock
         [HttpGet]
         public async Task<IActionResult> CurrentStock(int? warehouseId = null, int? categoryId = null)
@@ -195,141 +370,7 @@ namespace Store_Management_System.Controllers
             return PartialView("_StockValuationReport", valuation);
         }
 
-        // POST: Reports/ExportCurrentStockToExcel
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ExportCurrentStockToExcel(int? warehouseId = null, int? categoryId = null)
-        {
-            var query = _context.CurrentStocks
-        .Include(cs => cs.Article)
-            .ThenInclude(a => a.ArticleCategoryNavigation)
-        .Include(cs => cs.Warehouse)
-        .Where(cs => cs.Quantity > 0)
-        .AsQueryable();
-
-            if (warehouseId.HasValue && warehouseId > 0)
-                query = query.Where(cs => cs.WarehouseId == warehouseId);
-            if (categoryId.HasValue && categoryId > 0)
-                query = query.Where(cs => cs.Article.ArticleCategory == categoryId);
-
-            var data = await query
-                .Select(cs => new
-                {
-                    cs.Article.ArticleCode,
-                    cs.Article.ArticleName,
-                    Category = cs.Article.ArticleCategoryNavigation != null ? cs.Article.ArticleCategoryNavigation.Name : "Uncategorized",
-                    Warehouse = cs.Warehouse.WarehouseName,
-                    cs.Quantity,
-                    UnitCost = cs.Article.StandardCost,
-                    TotalValue = cs.Article.StandardCost * cs.Quantity
-                })
-                .ToListAsync();
-
-            var csv = new StringBuilder();
-            csv.AppendLine("SKU,Product Name,Category,Warehouse,Quantity,Unit Cost,Total Value");
-            foreach (var item in data)
-            {
-                csv.AppendLine($"\"{item.ArticleCode}\",\"{item.ArticleName}\",\"{item.Category}\",\"{item.Warehouse}\",{item.Quantity},{item.UnitCost:F2},{item.TotalValue:F2}");
-            }
-
-            return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"CurrentStock_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-        }
-
-        // POST: Reports/ExportLowStockToExcel
-        // POST: Reports/ExportLowStockToExcel
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ExportLowStockToExcel(int? warehouseId = null)
-        {
-            // Get stock levels from CurrentStock table
-            var stockLevels = await _context.CurrentStocks
-                .GroupBy(cs => cs.ArticleId)
-                .Select(g => new { ArticleId = g.Key, TotalStock = g.Sum(cs => cs.Quantity) })
-                .ToDictionaryAsync(k => k.ArticleId, v => v.TotalStock);
-
-            var query = _context.Articles
-                .Include(a => a.ArticleCategoryNavigation)
-                .Where(a => a.IsActive)
-                .AsQueryable();
-
-            if (warehouseId.HasValue && warehouseId > 0)
-            {
-                var stockQuery = _context.CurrentStocks
-                    .Where(cs => cs.WarehouseId == warehouseId && cs.Quantity > 0)
-                    .Select(cs => cs.ArticleId);
-                query = query.Where(a => stockQuery.Contains(a.Id));
-            }
-
-            var articles = await query.ToListAsync();
-
-            var data = articles
-                .Select(a => new
-                {
-                    a.ArticleCode,
-                    a.ArticleName,
-                    Category = a.ArticleCategoryNavigation != null ? a.ArticleCategoryNavigation.Name : "Uncategorized",
-                    CurrentStock = stockLevels.ContainsKey(a.Id) ? (int)stockLevels[a.Id] : 0,
-                    a.ReorderLevel,
-                    Shortage = (int)(a.ReorderLevel - (stockLevels.ContainsKey(a.Id) ? stockLevels[a.Id] : 0)),
-                    a.StandardPrice
-                })
-                .Where(a => a.CurrentStock <= a.ReorderLevel)
-                .ToList();
-
-            var csv = new StringBuilder();
-            csv.AppendLine("SKU,Product Name,Category,Current Stock,Reorder Level,Shortage,Unit Price");
-            foreach (var item in data)
-            {
-                csv.AppendLine($"\"{item.ArticleCode}\",\"{item.ArticleName}\",\"{item.Category}\",{item.CurrentStock},{item.ReorderLevel},{item.Shortage},{item.StandardPrice:F2}");
-            }
-
-            return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"LowStock_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-        }
-        // POST: Reports/ExportStockMovementToExcel
-        [HttpPost]
-        [ValidateAntiForgeryToken]
-        public async Task<IActionResult> ExportStockMovementToExcel(DateTime? fromDate = null, DateTime? toDate = null,
-            int? articleId = null, string? movementType = null)
-        {
-            if (!fromDate.HasValue) fromDate = DateTime.UtcNow.AddMonths(-1);
-            if (!toDate.HasValue) toDate = DateTime.UtcNow;
-
-            var query = _context.StockMovements
-                .Include(s => s.Article)
-                .Where(s => s.MovementDate >= fromDate && s.MovementDate <= toDate)
-                .AsQueryable();
-
-            if (articleId.HasValue && articleId > 0)
-                query = query.Where(s => s.ArticleId == articleId);
-            if (!string.IsNullOrEmpty(movementType))
-                query = query.Where(s => s.MovementType == movementType);
-
-            var data = await query
-                .OrderByDescending(s => s.MovementDate)
-                .Select(s => new
-                {
-                    s.MovementDate,
-                    s.MovementNumber,
-                    s.Article.ArticleCode,
-                    s.Article.ArticleName,
-                    s.MovementType,
-                    s.Quantity,
-                    s.UnitCost,
-                    s.TotalCost,
-                    s.ReferenceNumber
-                })
-                .ToListAsync();
-
-            var csv = new StringBuilder();
-            csv.AppendLine("Date,Reference,SKU,Product Name,Movement Type,Quantity,Unit Cost,Total Cost,PO/Reference");
-            foreach (var item in data)
-            {
-                csv.AppendLine($"{item.MovementDate:yyyy-MM-dd},\"{item.MovementNumber}\",\"{item.ArticleCode}\",\"{item.ArticleName}\",\"{item.MovementType}\",{item.Quantity},{item.UnitCost:F2},{item.TotalCost:F2},\"{item.ReferenceNumber}\"");
-            }
-
-            return File(Encoding.UTF8.GetBytes(csv.ToString()), "text/csv", $"StockMovement_{DateTime.Now:yyyyMMdd_HHmmss}.csv");
-        }
-
+      
         private async Task<List<SelectListItem>> GetWarehouses()
         {
             var warehouses = await _context.Warehouses

@@ -31,7 +31,7 @@
         </div>
     </div>
     <div class="card-body p-0">
-        <div class="table-responsive">
+        <div class="table-responsive table-scrollable">
             <table class="table table-hover mb-0">
                 <thead class="table-light">
                     <tr>
@@ -63,12 +63,16 @@
                                 <td><strong>@inv.CustomerName</strong></td>
                                 <td><span>@inv.InvoiceDate.ToString("yyyy-MM-dd")</span></td>
                                 <td><span>@(inv.DueDate?.ToString("yyyy-MM-dd") ?? "-")</span></td>
-                                <td><span>@(inv.TotalAmount.ToString("C"))</span></td>
+                                <td><span>@inv.TotalAmount.ToString("C")</span></td>
                                 <td><span class="badge bg-@inv.StatusClass">@inv.Status</span></td>
                                 <td>
                                     <div class="btn-group" role="group">
                                         <a asp-action="Details" asp-route-id="@inv.Id" class="btn btn-sm btn-info" title="View">
                                             <i class="align-middle" data-feather="eye"></i>
+                                        </a>
+                                        <!-- PDF Download Button - MOVED INSIDE THE LOOP -->
+                                        <a asp-action="Print" asp-route-id="@inv.Id" class="btn btn-sm btn-secondary" target="_blank" title="View Invoice">
+                                            <i class="align-middle" data-feather="printer"></i> Invoice
                                         </a>
                                         @if (inv.Status == "Posted")
                                         {
@@ -106,6 +110,19 @@
 
 @section Scripts {
     <script>
+        //         function viewInvoice(invoiceId) {
+        //     $('#loadingSpinner').fadeIn(200);
+
+        //     Set iframe source to PDF endpoint
+        //     $('#pdfFrame').attr('src', '/Invoices/ViewPdf?id=' + invoiceId);
+        //     $('#downloadPdfLink').attr('href', '/Invoices/DownloadPdf?id=' + invoiceId);
+
+        //     $('#pdfModal').modal('show');
+
+        //     $('#pdfModal').on('shown.bs.modal', function() {
+        //         $('#loadingSpinner').fadeOut(200);
+        //     });
+        // }
         var currentPage = @Model.CurrentPage;
         var searchTerm = '@Model.SearchTerm';
         var status = '@Model.Status';
@@ -122,38 +139,66 @@
         $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); } });
         $('#statusFilter').on('change', function() { status = $(this).val(); currentPage = 1; refreshPage(); });
 
-        function markAsPaid(id) {
-            if (confirm('Mark this invoice as paid?')) {
+              function markAsPaid(id) {
+            showConfirm('Mark this invoice as paid? This will update the customer\'s balance.', function() {
+                // Show spinner manually
+                $('#loadingSpinner').fadeIn(200);
+
                 var token = $('input[name="__RequestVerificationToken"]').val();
                 $.ajax({
                     url: '@Url.Action("MarkAsPaid", "Invoices")',
                     type: 'POST',
                     data: { id: id, __RequestVerificationToken: token },
                     success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
                     }
                 });
-            }
+            });
         }
 
-        function cancelInvoice(id) {
-            var reason = prompt('Enter cancellation reason:');
-            if (reason) {
-                var token = $('input[name="__RequestVerificationToken"]').val();
-                $.ajax({
-                    url: '@Url.Action("Cancel", "Invoices")',
-                    type: 'POST',
-                    data: { id: id, reason: reason, __RequestVerificationToken: token },
-                    success: function(response) {
-                        if (response.success) { showToast('success', response.message); refreshPage(); }
-                        else { showToast('error', response.message); }
-                    }
-                });
-            }
-        }
 
-        function showToast(type, message) {
+               function cancelInvoice(id) {
+            showConfirm('Cancel this invoice? This action cannot be undone.', function() {
+                // Show spinner manually
+                $('#loadingSpinner').fadeIn(200);
+
+                var reason = prompt('Enter cancellation reason:');
+                if (reason) {
+                    var token = $('input[name="__RequestVerificationToken"]').val();
+                    $.ajax({
+                        url: '@Url.Action("Cancel", "Invoices")',
+                        type: 'POST',
+                        data: { id: id, reason: reason, __RequestVerificationToken: token },
+                        success: function(response) {
+                            $('#loadingSpinner').fadeOut(200);
+                            if (response.success) {
+                                showToast('success', response.message);
+                                refreshPage();
+                            } else {
+                                showToast('error', response.message);
+                            }
+                        },
+                        error: function() {
+                            $('#loadingSpinner').fadeOut(200);
+                            showToast('error', 'An error occurred. Please try again.');
+                        }
+                    });
+                } else {
+                    $('#loadingSpinner').fadeOut(200);
+                }
+            });
+        }
+               function showToast(type, message) {
             var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
             var icon = type === 'success' ? 'check-circle' : 'alert-circle';
             var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;

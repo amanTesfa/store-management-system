@@ -136,5 +136,7 @@ namespace Store_Management_System.ViewModels
         public int Quantity { get; set; }
         public string Reference { get; set; } = string.Empty;
         public string PerformedBy { get; set; } = string.Empty;
+        public decimal UnitCost { get; internal set; }
+        public string WarehouseName { get; internal set; }
     }
 }

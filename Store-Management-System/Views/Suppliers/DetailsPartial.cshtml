@@ -16,6 +16,8 @@
         <!-- Supplier Information -->
         <div class="row">
             <div class="col-md-6">
+                <div class="table-responsive table-scrollable">
+
                 <table class="table table-bordered">
                     <tr>
                         <th style="width: 35%">Supplier Name</th>
@@ -38,8 +40,11 @@
                         <td>@(Model.Address ?? "N/A")</td>
                     </tr>
                 </table>
+                </div>
             </div>
             <div class="col-md-6">
+                <div class="table-responsive table-scrollable">
+
                 <table class="table table-bordered">
                     <tr>
                         <th style="width: 35%">Payment Terms</th>
@@ -86,6 +91,7 @@
                         </tr>
                     }
                 </table>
+                </div>
             </div>
         </div>
 
@@ -98,7 +104,7 @@
 
             @if (Model.Articles.Any())
             {
-                <div class="table-responsive">
+                <div class="table-responsive table-scrollable">
                     <table class="table table-sm table-hover">
                         <thead>
                             <tr>

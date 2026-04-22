@@ -117,12 +117,77 @@ public partial class InventoryDbContext : DbContext
 
     public virtual DbSet<WithholdingTransaction> WithholdingTransactions { get; set; }
     public virtual DbSet<ActivityLog> ActivityLogs { get; set; }
+    public virtual DbSet<StockAdjustment> StockAdjustments { get; set; }
+    public virtual DbSet<StockAdjustmentLine> StockAdjustmentLines { get; set; }
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
         => optionsBuilder.UseSqlServer("Server=THANOS;Database=InventoryDB;Trusted_Connection=True;TrustServerCertificate=True;");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<StockAdjustment>(entity =>
+        {
+            entity.ToTable("StockAdjustments");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.AdjustmentNumber).IsUnique();
+            entity.Property(e => e.AdjustmentNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Draft");
+            entity.Property(e => e.AdjustmentType).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.ReasonCategory).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.TotalValue).HasColumnType("decimal(18,6)");
+
+            // Explicit foreign key configuration
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CreatedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.SubmittedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.SubmittedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ApprovedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.PostedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.PostedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.UpdatedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.UpdatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockAdjustmentLine>(entity =>
+        {
+            entity.ToTable("StockAdjustmentLines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SystemQuantity).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.PhysicalQuantity).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.Variance).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.UnitCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.TotalValue).HasColumnType("decimal(18,6)");
+
+            entity.HasOne(e => e.StockAdjustment)
+                .WithMany(e => e.StockAdjustmentLines)
+                .HasForeignKey(e => e.AdjustmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Article)
+                .WithMany()
+                .HasForeignKey(e => e.ArticleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
         modelBuilder.Entity<ActivityLog>(entity =>
         {
             entity.ToTable("ActivityLogs");

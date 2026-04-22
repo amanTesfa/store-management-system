@@ -1,0 +1,288 @@
+﻿@model StockAdjustmentIndexViewModel
+
+@{
+    ViewData["Title"] = "Stock Adjustments";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Stock Adjustments</h1>
+        <span class="badge bg-dark text-white ms-2">Inventory Corrections</span>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="align-middle" data-feather="plus"></i> New Adjustment
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="row g-3">
+            <div class="col-md-3">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by #..." value="@Model.SearchTerm" />
+            </div>
+            <div class="col-md-2">
+                <select id="statusFilter" class="form-select" asp-items="Model.Statuses"></select>
+            </div>
+            <div class="col-md-2">
+                <select id="warehouseFilter" class="form-select" asp-items="Model.Warehouses"></select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" id="searchBtn">
+                    <i class="align-middle" data-feather="search"></i> Search
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive table-scrollable">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Adjustment #</th>
+                        <th>Warehouse</th>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Reason</th>
+                        <th class="text-end">Total Value</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Adjustments.Any())
+                    {
+                        <tr>
+                            <td colspan="9" class="text-center py-4">
+                                <i class="align-middle" data-feather="clipboard" style="width: 48px; height: 48px;"></i>
+                                <p class="mt-2 mb-0">No stock adjustments found.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var adj in Model.Adjustments)
+                        {
+                            <tr>
+                                <td><code>@adj.AdjustmentNumber</code></td>
+                                <td>@adj.WarehouseName</td>
+                                <td>@adj.AdjustmentDate.ToString("yyyy-MM-dd")</td>
+                                <td>
+                                    @{
+                                        var typeClass = adj.AdjustmentType == "WriteOff" ? "text-danger" :
+                                                       adj.AdjustmentType == "WriteOn" ? "text-success" : "text-warning";
+                                    }
+                                    <span class="@typeClass">@adj.AdjustmentType</span>
+                                 
+                                <td>@adj.ReasonCategory</td>
+                                <td class="text-end @(adj.TotalValue < 0 ? "text-danger" : "text-success")">
+                                    @adj.TotalValue.ToString("C")
+                                 </td>
+                                <td><span class="badge bg-@adj.StatusClass">@adj.Status</span></td>
+                                <td><small>@adj.CreatedAt.ToString("MMM dd")</small><br /><small class="text-muted">@adj.CreatedByName</small></td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@adj.Id" class="btn btn-sm btn-info" title="View">
+                                            <i class="align-middle" data-feather="eye"></i>
+                                        </a>
+                                        @if (adj.Status == "Draft")
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@adj.Id" class="btn btn-sm btn-primary" title="Edit">
+                                                <i class="align-middle" data-feather="edit-2"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-success" onclick="submitAdjustment(@adj.Id)" title="Submit for Approval">
+                                                <i class="align-middle" data-feather="send"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="cancelAdjustment(@adj.Id)" title="Cancel">
+                                                <i class="align-middle" data-feather="x-circle"></i>
+                                            </button>
+                                        }
+                                        @if (adj.Status == "Submitted")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-success" onclick="approveAdjustment(@adj.Id)" title="Approve">
+                                                <i class="align-middle" data-feather="check-circle"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="rejectAdjustment(@adj.Id)" title="Reject">
+                                                <i class="align-middle" data-feather="x-circle"></i>
+                                            </button>
+                                        }
+                                        @if (adj.Status == "Approved")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="postAdjustment(@adj.Id)" title="Post to Inventory">
+                                                <i class="align-middle" data-feather="upload"></i>
+                                            </button>
+                                        }
+                                    </div>
+                                 
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between">
+            <small>Page @Model.CurrentPage of @Model.TotalPages</small>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" disabled="@(Model.CurrentPage <= 1)">Previous</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" disabled="@(Model.CurrentPage >= Model.TotalPages)">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        var currentPage = @Model.CurrentPage;
+        var searchTerm = '@Model.SearchTerm';
+        var status = '@Model.Status';
+        var warehouseId = '@Model.WarehouseId';
+                        function showConfirm(message, onConfirm) {
+            $('#confirmModalMessage').text(message);
+            $('#confirmModal').modal('show');
+
+            $('#confirmModalOk').off('click').on('click', function () {
+                $('#confirmModal').modal('hide');
+                if (onConfirm) onConfirm();
+            });
+        }
+        function refreshPage() {
+            var url = '@Url.Action("Index", "StockAdjustments")?searchTerm=' + encodeURIComponent(searchTerm) + 
+                      '&status=' + encodeURIComponent(status) + '&warehouseId=' + encodeURIComponent(warehouseId) + 
+                      '&page=' + currentPage;
+            window.location.href = url;
+        }
+
+        function previousPage() { if (currentPage > 1) { currentPage--; refreshPage(); } }
+        function nextPage() { currentPage++; refreshPage(); }
+
+        $('#searchBtn').on('click', function() { 
+            searchTerm = $('#searchInput').val(); 
+            status = $('#statusFilter').val(); 
+            warehouseId = $('#warehouseFilter').val();
+            currentPage = 1; 
+            refreshPage(); 
+        });
+
+        $('#searchInput').on('keypress', function(e) {
+            if (e.which === 13) {
+                searchTerm = $(this).val();
+                status = $('#statusFilter').val();
+                warehouseId = $('#warehouseFilter').val();
+                currentPage = 1;
+                refreshPage();
+            }
+        });
+
+        $('#statusFilter, #warehouseFilter').on('change', function() {
+            status = $('#statusFilter').val();
+            warehouseId = $('#warehouseFilter').val();
+            currentPage = 1;
+            refreshPage();
+        });
+
+        function submitAdjustment(id) {
+            showConfirm('Submit this adjustment for approval?', function() {
+                $('#loadingSpinner').fadeIn(200);
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Submit", "StockAdjustments")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    },
+                    error: function() { $('#loadingSpinner').fadeOut(200); showToast('error', 'An error occurred.'); }
+                });
+            });
+        }
+
+        function approveAdjustment(id) {
+            var comments = prompt('Enter approval comments (optional):');
+            $('#loadingSpinner').fadeIn(200);
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            $.ajax({
+                url: '@Url.Action("Approve", "StockAdjustments")',
+                type: 'POST',
+                data: { id: id, comments: comments, __RequestVerificationToken: token },
+                success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
+                    if (response.success) { showToast('success', response.message); refreshPage(); }
+                    else { showToast('error', response.message); }
+                },
+                error: function() { $('#loadingSpinner').fadeOut(200); showToast('error', 'An error occurred.'); }
+            });
+        }
+
+        function rejectAdjustment(id) {
+            var reason = prompt('Enter rejection reason:');
+            if (reason) {
+                $('#loadingSpinner').fadeIn(200);
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Reject", "StockAdjustments")',
+                    type: 'POST',
+                    data: { id: id, reason: reason, __RequestVerificationToken: token },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    },
+                    error: function() { $('#loadingSpinner').fadeOut(200); showToast('error', 'An error occurred.'); }
+                });
+            }
+        }
+
+        function postAdjustment(id) {
+            showConfirm('Post this adjustment to inventory? This will update stock levels and cannot be undone.', function() {
+                $('#loadingSpinner').fadeIn(200);
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Post", "StockAdjustments")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    },
+                    error: function() { $('#loadingSpinner').fadeOut(200); showToast('error', 'An error occurred.'); }
+                });
+            });
+        }
+
+        function cancelAdjustment(id) {
+            var reason = prompt('Enter cancellation reason:');
+            if (reason) {
+                $('#loadingSpinner').fadeIn(200);
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Cancel", "StockAdjustments")',
+                    type: 'POST',
+                    data: { id: id, reason: reason, __RequestVerificationToken: token },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) { showToast('success', response.message); refreshPage(); }
+                        else { showToast('error', response.message); }
+                    },
+                    error: function() { $('#loadingSpinner').fadeOut(200); showToast('error', 'An error occurred.'); }
+                });
+            }
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+    </script>
+}

@@ -263,6 +263,12 @@
                             <span class="align-middle">Returns</span>
                         </a>
                     </li>
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "StockAdjustments" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="StockAdjustments" asp-action="Index">
+                            <i class="align-middle" data-feather="refresh-cw"></i>
+                            <span class="align-middle">Stock Adjustments</span>
+                        </a>
+                    </li>
                     <!-- Sales & Customers Section -->
                     <li class="sidebar-header">Sales Transaction</li>
 

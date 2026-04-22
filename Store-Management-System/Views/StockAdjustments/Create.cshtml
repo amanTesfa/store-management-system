@@ -1,0 +1,371 @@
+﻿@model StockAdjustmentViewModel
+
+@{
+    ViewData["Title"] = "Create Stock Adjustment";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">Create Stock Adjustment</h1>
+    <span class="badge bg-dark text-white ms-2">@Model.Status</span>
+</div>
+
+<form id="mainForm" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="AdjustmentNumber" />
+    <input type="hidden" asp-for="Status" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Adjustment Information</h5>
+                </div>
+                <div class="card-body">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="AdjustmentNumber" class="form-label">Adjustment Number</label>
+                        <input asp-for="AdjustmentNumber" class="form-control" readonly style="background-color: #e9ecef;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="WarehouseId" class="form-label">Warehouse *</label>
+                        <select asp-for="WarehouseId" class="form-select" id="WarehouseId" asp-items="Model.Warehouses">
+                            <option value="">-- Select Warehouse --</option>
+                        </select>
+                        <span asp-validation-for="WarehouseId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="AdjustmentDate" class="form-label">Adjustment Date *</label>
+                        <input asp-for="AdjustmentDate" class="form-control" type="date" />
+                        <span asp-validation-for="AdjustmentDate" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="AdjustmentType" class="form-label">Adjustment Type *</label>
+                                <select asp-for="AdjustmentType" class="form-select" asp-items="Model.AdjustmentTypes">
+                                    <option value="">-- Select Type --</option>
+                                </select>
+                                <span asp-validation-for="AdjustmentType" class="text-danger small"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="ReasonCategory" class="form-label">Reason Category *</label>
+                                <select asp-for="ReasonCategory" class="form-select" asp-items="Model.ReasonCategories">
+                                    <option value="">-- Select Reason --</option>
+                                </select>
+                                <span asp-validation-for="ReasonCategory" class="text-danger small"></span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="ReasonDescription" class="form-label">Reason Description</label>
+                        <textarea asp-for="ReasonDescription" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label asp-for="ReferenceNumber" class="form-label">Reference Number</label>
+                                <input asp-for="ReferenceNumber" class="form-control" placeholder="e.g., Count Sheet #, Incident #" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label">Notes</label>
+                        <textarea asp-for="Notes" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" id="adjustmentInfo">
+                        Select a warehouse and add products to adjust.
+                    </div>
+                    <hr />
+                    <div class="d-flex justify-content-between">
+                        <strong>Total Variance Value:</strong>
+                        <strong id="totalValueDisplay" class="text-danger">$0.00</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <strong>Total Items:</strong>
+                        <span id="totalItemsDisplay">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Line Items -->
+    <div class="card mt-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Products to Adjust</h5>
+            <button type="button" class="btn btn-sm btn-primary" onclick="addLine()">
+                <i class="align-middle" data-feather="plus"></i> Add Product
+            </button>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered mb-0" id="itemsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="25%">Product</th>
+                            <th width="15%">System Qty</th>
+                            <th width="15%">Physical Qty</th>
+                            <th width="10%">Variance</th>
+                            <th width="15%">Unit Cost</th>
+                            <th width="15%">Total Value</th>
+                            <th width="5%">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                        @for (int i = 0; i < Model.Lines.Count; i++)
+                        {
+                            var line = Model.Lines[i];
+                            <tr class="line-item" data-index="@i">
+                                <td>
+                                    <select name="Lines[@i].ArticleId" class="form-select product-select" data-index="@i" onchange="loadProductStock(@i)">
+                                        <option value="">-- Select Product --</option>
+                                        @foreach (var product in Model.Products)
+                                        {
+                                            <option value="@product.Value" selected="@(line.ArticleId.ToString() == product.Value)">
+                                                @product.Text
+                                            </option>
+                                        }
+                                    </select>
+                                    <div class="product-details-@i small text-muted mt-1"></div>
+                                    <input type="hidden" name="Lines[@i].IsBatchTracked" class="is-batch-tracked-@i" />
+                                    <input type="hidden" name="Lines[@i].IsSerialized" class="is-serialized-@i" />
+                                    <input type="hidden" name="Lines[@i].IsExpiryTracked" class="is-expiry-tracked-@i" />
+                                    <input type="hidden" name="Lines[@i].UnitCost" class="unit-cost-@i" />
+                                 
+                                <td>
+                                    <input type="number" name="Lines[@i].SystemQuantity" class="form-control system-qty" readonly style="background-color: #e9ecef;" value="0" />
+                                 
+                                <td>
+                                    <input type="number" name="Lines[@i].PhysicalQuantity" class="form-control physical-qty" step="0.01" value="@line.PhysicalQuantity" onchange="updateLineVariance(@i)" />
+                                </td>
+                                <td class="variance-@i text-end fw-bold">0</td>
+                                <td class="unit-cost-display-@i text-end">$0.00</td>
+                                <td class="line-total-@i text-end fw-bold">$0.00</td>
+                                <td class="text-center">
+                                    <button type="button" class="btn btn-sm btn-danger" onclick="removeLine(this)">
+                                        <i class="align-middle" data-feather="x"></i>
+                                    </button>
+                                 </td>
+                             </tr>
+                            <tr id="tracking-row-@i" class="tracking-row" style="display:none;">
+                                <td colspan="7" class="bg-light">
+                                    <div class="row p-2">
+                                        <div class="col-md-4">
+                                            <label class="form-label small">Batch/Lot Number</label>
+                                            <input type="text" name="Lines[@i].BatchNumber" class="form-control form-control-sm" value="@line.BatchNumber" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small">Serial Number</label>
+                                            <input type="text" name="Lines[@i].SerialNumber" class="form-control form-control-sm" value="@line.SerialNumber" />
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label class="form-label small">Expiry Date</label>
+                                            <input type="date" name="Lines[@i].ExpiryDate" class="form-control form-control-sm" value="@(line.ExpiryDate?.ToString("yyyy-MM-dd"))" />
+                                        </div>
+                                    </div>
+                                
+                             </td>
+                             </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between">
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+        </a>
+        <div>
+            @if (Model.Status == "Draft")
+            {
+                <button type="submit" class="btn btn-primary">
+                    <i class="align-middle" data-feather="save"></i> Save Draft
+                </button>
+            }
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    @{await Html.RenderPartialAsync("_ValidationScriptsPartial");}
+
+    <script>
+        var lineCounter = @Model.Lines.Count;
+        var warehouseId = 0;
+
+        $('#WarehouseId').on('change', function() {
+            warehouseId = $(this).val();
+            $('#adjustmentInfo').html(warehouseId ? 'Warehouse selected. Add products to adjust.' : 'Select a warehouse first.');
+        });
+
+        function addLine() {
+            if (!warehouseId) {
+                showToast('warning', 'Please select a warehouse first.');
+                return;
+            }
+
+            var index = lineCounter;
+            var newRow = `
+                <tr class="line-item" data-index="${index}">
+                    <td>
+                        <select name="Lines[${index}].ArticleId" class="form-select product-select" data-index="${index}" onchange="loadProductStock(${index})">
+                            <option value="">-- Select Product --</option>
+                            @foreach (var product in Model.Products)
+                            {
+                                <option value="@product.Value">@product.Text</option>
+                            }
+                        </select>
+                        <div class="product-details-${index} small text-muted mt-1"></div>
+                        <input type="hidden" name="Lines[${index}].IsBatchTracked" class="is-batch-tracked-${index}" />
+                        <input type="hidden" name="Lines[${index}].IsSerialized" class="is-serialized-${index}" />
+                        <input type="hidden" name="Lines[${index}].IsExpiryTracked" class="is-expiry-tracked-${index}" />
+                        <input type="hidden" name="Lines[${index}].UnitCost" class="unit-cost-${index}" />
+                     </span>
+                    <td>
+                        <input type="number" name="Lines[${index}].SystemQuantity" class="form-control system-qty" readonly style="background-color: #e9ecef;" value="0" />
+                     </span>
+                    <td>
+                        <input type="number" name="Lines[${index}].PhysicalQuantity" class="form-control physical-qty" step="0.01" onchange="updateLineVariance(${index})" />
+                     </span>
+                    <td class="variance-${index} text-end fw-bold">0</span>
+                    <td class="unit-cost-display-${index} text-end">$0.00</span>
+                    <td class="line-total-${index} text-end fw-bold">$0.00</span>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-sm btn-danger" onclick="removeLine(this)">
+                            <i class="align-middle" data-feather="x"></i>
+                        </button>
+                     </span>
+                 </table>
+                <tr id="tracking-row-${index}" class="tracking-row" style="display:none;">
+                    <td colspan="7" class="bg-light">
+                        <div class="row p-2">
+                            <div class="col-md-4"><label class="form-label small">Batch/Lot Number</label><input type="text" name="Lines[${index}].BatchNumber" class="form-control form-control-sm" /></div>
+                            <div class="col-md-4"><label class="form-label small">Serial Number</label><input type="text" name="Lines[${index}].SerialNumber" class="form-control form-control-sm" /></div>
+                            <div class="col-md-4"><label class="form-label small">Expiry Date</label><input type="date" name="Lines[${index}].ExpiryDate" class="form-control form-control-sm" /></div>
+                        </div>
+                     </span>
+                 </tr>
+            `;
+            $('#itemsBody').append(newRow);
+            lineCounter++;
+            updateSummary();
+        }
+
+        function loadProductStock(index) {
+            var articleId = $(`.product-select[data-index="${index}"]`).val();
+            if (!articleId || !warehouseId) return;
+
+            $.ajax({
+                url: '@Url.Action("GetProductStock", "StockAdjustments")',
+                type: 'GET',
+                data: { articleId: articleId, warehouseId: warehouseId },
+                success: function(response) {
+                    if (response.success) {
+                        $(`.product-details-${index}`).html(`<small>${response.articleCode} | Cost: $${response.unitCost.toFixed(2)}</small>`);
+                        $(`.system-qty`).eq(index).val(response.systemQuantity);
+                        $(`.unit-cost-${index}`).val(response.unitCost);
+                        $(`.unit-cost-display-${index}`).text('$' + response.unitCost.toFixed(2));
+                        
+                        $(`.is-batch-tracked-${index}`).val(response.isBatchTracked);
+                        $(`.is-serialized-${index}`).val(response.isSerialized);
+                        $(`.is-expiry-tracked-${index}`).val(response.isExpiryTracked);
+                        
+                        var showTracking = response.isBatchTracked || response.isSerialized || response.isExpiryTracked;
+                        if (showTracking) {
+                            $(`#tracking-row-${index}`).show();
+                        } else {
+                            $(`#tracking-row-${index}`).hide();
+                        }
+                        updateLineVariance(index);
+                    }
+                }
+            });
+        }
+
+        function updateLineVariance(index) {
+            var systemQty = parseFloat($(`.system-qty`).eq(index).val()) || 0;
+            var physicalQty = parseFloat($(`.physical-qty`).eq(index).val()) || 0;
+            var unitCost = parseFloat($(`.unit-cost-${index}`).val()) || 0;
+            var variance = physicalQty - systemQty;
+            var totalValue = variance * unitCost;
+            
+            $(`.variance-${index}`).text(variance.toFixed(2));
+            $(`.line-total-${index}`).text('$' + totalValue.toFixed(2));
+            
+            if (variance > 0) {
+                $(`.variance-${index}`).addClass('text-success').removeClass('text-danger');
+            } else if (variance < 0) {
+                $(`.variance-${index}`).addClass('text-danger').removeClass('text-success');
+            }
+            
+            updateSummary();
+        }
+
+        function removeLine(btn) {
+            $(btn).closest('tr.line-item').remove();
+            $(btn).closest('tr.line-item').next('tr.tracking-row').remove();
+            updateSummary();
+        }
+
+        function updateSummary() {
+            var totalValue = 0;
+            var totalItems = 0;
+            
+            $('.line-item').each(function(index) {
+                var variance = parseFloat($(this).find('.variance').text()) || 0;
+                var unitCost = parseFloat($(this).find('.unit-cost-display').text().replace('$', '')) || 0;
+                if (variance !== 0) {
+                    totalItems++;
+                    totalValue += variance * unitCost;
+                }
+            });
+            
+            $('#totalItemsDisplay').text(totalItems);
+            $('#totalValueDisplay').text('$' + totalValue.toFixed(2));
+            if (totalValue > 0) {
+                $('#totalValueDisplay').addClass('text-success').removeClass('text-danger');
+            } else if (totalValue < 0) {
+                $('#totalValueDisplay').addClass('text-danger').removeClass('text-success');
+            }
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-warning';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+
+        $(document).ready(function() {
+            @for (int i = 0; i < Model.Lines.Count; i++)
+            {
+                <text>updateLineVariance(@i);</text>
+            }
+            updateSummary();
+        });
+    </script>
+}

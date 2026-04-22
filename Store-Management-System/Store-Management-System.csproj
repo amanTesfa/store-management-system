@@ -19,9 +19,13 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <PackageReference Include="Microsoft.ML" Version="5.0.0" />
+    <PackageReference Include="Microsoft.ML.FastTree" Version="5.0.0" />
+    <PackageReference Include="Microsoft.ML.TimeSeries" Version="5.0.0" />
   </ItemGroup>
 
   <ItemGroup>
+    <Folder Include="ML\Models\" />
     <Folder Include="Views\Products\" />
     <Folder Include="Views\Stock\" />
     <Folder Include="wwwroot\img\avatars\" />

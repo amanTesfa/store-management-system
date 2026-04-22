@@ -1,17 +1,20 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.ML;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 
 namespace Store_Management_System.Controllers
 {
     public class HomeController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public HomeController(InventoryDbContext context)
+        private readonly ForecastService _forecastService;
+        public HomeController(InventoryDbContext context, ForecastService forecastServce)
         {
             _context = context;
+            _forecastService = forecastServce;
         }
 
         [AllowAnonymous]
@@ -100,7 +103,7 @@ namespace Store_Management_System.Controllers
                 .GroupBy(vl => vl.ArticleId)
                 .Select(g => new { ArticleId = g.Key, TotalSold = g.Sum(vl => vl.Quantity) })
                 .OrderByDescending(x => x.TotalSold)
-                .Take(5)
+                .Take(6)
                 .Join(_context.Articles, x => x.ArticleId, a => a.Id, (x, a) => new { a.ArticleName, x.TotalSold })
                 .ToListAsync();
 
@@ -140,8 +143,70 @@ namespace Store_Management_System.Controllers
             ViewBag.TopProductNames = topProductNames;
             ViewBag.TopProductQuantities = topProductQuantities;
             ViewBag.RecentOrders = recentOrders;
+            // Get top selling products for forecast
+
+            // Get top selling products for forecast
+            var topProducts2 = await _context.Articles
+                .Where(a => a.IsActive && a.IsSellable)
+                .OrderByDescending(a => a.StandardPrice)
+                .Take(6)  // Top 6 products for forecast
+                .ToListAsync();
+            var forecasts = new List<DemandForecastResult>();
+
+            foreach (var product in topProducts2)
+            {
+                var forecast = await _forecastService.PredictDemand(
+                    product.Id,
+                    product.ArticleName,
+                    product.StandardPrice);
+
+                if (forecast != null)
+                {
+                    forecasts.Add(forecast);
+                }
+            }
+
+            ViewBag.Forecasts = forecasts.OrderByDescending(f => f.PredictedSales).ToList();
+
+            // Get low stock products that need reordering based on forecast
+            var stockLevels2 = await _context.CurrentStocks
+                .GroupBy(cs => cs.ArticleId)
+                .Select(g => new { ArticleId = g.Key, TotalStock = g.Sum(cs => cs.Quantity) })
+                .ToDictionaryAsync(k => k.ArticleId, v => v.TotalStock);
+
+            var reorderSuggestions = new List<ReorderSuggestion>();
+
+            foreach (var product in topProducts2)
+            {
+                var currentStock = stockLevels2.ContainsKey(product.Id) ? (int)stockLevels2[product.Id] : 0;
+                var forecast = forecasts.FirstOrDefault(f => f.ProductId == product.Id);
+
+                if (forecast != null && currentStock < forecast.PredictedSales)
+                {
+                    reorderSuggestions.Add(new ReorderSuggestion
+                    {
+                        ProductId = product.Id,
+                        ProductName = product.ArticleName,
+                        CurrentStock = currentStock,
+                        PredictedDemand = (int)forecast.PredictedSales,
+                        SuggestedOrder = (int)(forecast.PredictedSales - currentStock),
+                        Urgency = currentStock < forecast.PredictedSales * 0.3 ? "Critical" : "Warning"
+                    });
+                }
+            }
+
+            ViewBag.ReorderSuggestions = reorderSuggestions.Take(5).ToList();
 
             return View();
         }
+    }
+    public class ReorderSuggestion
+    {
+        public int ProductId { get; set; }
+        public string ProductName { get; set; } = string.Empty;
+        public int CurrentStock { get; set; }
+        public int PredictedDemand { get; set; }
+        public int SuggestedOrder { get; set; }
+        public string Urgency { get; set; } = string.Empty;
     }
 }

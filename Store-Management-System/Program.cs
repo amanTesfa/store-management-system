@@ -67,8 +67,17 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
     options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Admin", "Manager"));
 });
+// Add ML Services
+// ML Services
+builder.Services.AddScoped<MLDataService>();
+builder.Services.AddScoped<ModelTrainerService>();
+builder.Services.AddScoped<SampleDataGenerator>();
+builder.Services.AddSingleton<ForecastService>();
+// Add background service for weekly retraining
+builder.Services.AddHostedService<ModelRetrainingBackgroundService>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ActivityLogService>();
+
 var app = builder.Build();
 
 // Test database connection (using InventoryDbContext)

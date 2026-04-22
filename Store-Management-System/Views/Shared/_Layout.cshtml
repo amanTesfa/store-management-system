@@ -354,7 +354,12 @@
                     <li class="sidebar-header">
                         Account
                     </li>
-
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "MLTraining" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="MLTraining" asp-action="Index">
+                            <i class="align-middle" data-feather="cpu"></i>
+                            <span class="align-middle">AI Training</span>
+                        </a>
+                    </li>
                     <li class="sidebar-item">
                         <a class="sidebar-link" asp-controller="Profile" asp-action="Index">
                             <i class="align-middle" data-feather="user"></i>

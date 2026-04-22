@@ -219,6 +219,147 @@
         </div>
     </div>
 </div>
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header bg-gradient-primary text-white">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="align-middle me-2" data-feather="cpu"></i>
+                        <strong>AI Demand Forecast</strong>
+                        <span class="ms-2 badge bg-light text-dark">Powered by ML.NET</span>
+                    </div>
+                    <small class="text-white-50">Predictions for next month</small>
+                </div>
+            </div>
+            <div class="card-body">
+                @if (ViewBag.Forecasts != null && ((IEnumerable<dynamic>)ViewBag.Forecasts).Any())
+                {
+                    <div class="row">
+                        @foreach (var forecast in ViewBag.Forecasts)
+                        {
+                            var progressWidth = forecast.PredictedSales > 100 ? 100 : forecast.PredictedSales;
+                            var statusClass = forecast.PredictedSales > 100 ? "danger" :
+                            forecast.PredictedSales > 50 ? "warning" : "success";
+
+                            <div class="col-md-6 col-lg-4 mb-3">
+                                <div class="card h-100 border-0 shadow-sm">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <h6 class="card-title mb-0 text-truncate" style="max-width: 150px;" title="@forecast.ProductName">
+                                                @forecast.ProductName
+                                            </h6>
+                                            <span class="badge bg-@statusClass">
+                                                @(forecast.PredictedSales > 100 ? "High Demand" : forecast.PredictedSales > 50 ? "Medium Demand" : "Normal")
+                                            </span>
+                                        </div>
+                                        <div class="text-center my-3">
+                                            <div class="display-6 fw-bold text-primary">
+                                                @Math.Round(forecast.PredictedSales)
+                                                <small class="fs-6 text-muted">units</small>
+                                            </div>
+                                            <small class="text-muted">Predicted for @forecast.Month/@forecast.Year</small>
+                                        </div>
+                                        <div class="progress mb-2" style="height: 6px;">
+                                            <div class="progress-bar bg-@statusClass" role="progressbar"
+                                                 style="width: @Math.Min(progressWidth, 100)%">
+                                            </div>
+                                        </div>
+                                        <div class="d-flex justify-content-between small">
+                                            <span class="text-muted">Confidence: @(Math.Round(forecast.Confidence * 100))%</span>
+                                            <span class="text-@statusClass">
+                                                <i class="align-middle" data-feather="trending-up"></i>
+                                                @(forecast.PredictedSales > 50 ? "Growing" : "Stable")
+                                            </span>
+                                        </div>
+                                        <div class="mt-2">
+                                            <small class="text-muted">
+                                                <i class="align-middle" data-feather="info"></i>
+                                                @forecast.Recommendation
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="text-center py-4">
+                        <i class="align-middle" data-feather="cpu" style="width: 48px; height: 48px;"></i>
+                        <p class="mt-2 mb-0">No forecast data available. Please train the ML model first.</p>
+                        <a asp-controller="MLTraining" asp-action="Index" class="btn btn-sm btn-primary mt-2">
+                            Go to AI Training
+                        </a>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Reorder Suggestions Widget -->
+@if (ViewBag.ReorderSuggestions != null && ((IEnumerable<dynamic>)ViewBag.ReorderSuggestions).Any())
+{
+    <div class="row mt-3">
+        <div class="col-12">
+            <div class="card border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <i class="align-middle me-2" data-feather="shopping-cart"></i>
+                    <strong>AI Reorder Suggestions</strong>
+                    <span class="ms-2 badge bg-dark text-white">Based on demand forecast</span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Product</th>
+                                    <th class="text-end">Current Stock</th>
+                                    <th class="text-end">Predicted Demand</th>
+                                    <th class="text-end">Suggested Order</th>
+                                    <th>Urgency</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var suggestion in ViewBag.ReorderSuggestions)
+                                {
+                                    var urgencyClass = suggestion.Urgency == "Critical" ? "danger" : "warning";
+                                    <tr>
+                                        <td>
+                                            <strong>@suggestion.ProductName</strong>
+                                            @if (suggestion.Urgency == "Critical")
+                                            {
+                                                <span class="badge bg-danger ms-1">!</span>
+                                            }
+                                        </td>
+                                        <td class="text-end text-danger">@suggestion.CurrentStock</td>
+                                        <td class="text-end fw-bold">@suggestion.PredictedDemand</td>
+                                        <td class="text-end text-success">@suggestion.SuggestedOrder</td>
+                                        <td>
+                                            <span class="badge bg-@urgencyClass">@suggestion.Urgency</span>
+                                        </td>
+                                        <td>
+                                            <a asp-controller="PurchaseOrders" asp-action="Create"
+                                               asp-route-productId="@suggestion.ProductId"
+                                               class="btn btn-sm btn-primary">
+                                                <i class="align-middle" data-feather="plus"></i> Create PO
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+
 
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>

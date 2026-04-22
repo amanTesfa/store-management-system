@@ -62,7 +62,9 @@
         background-color: #333;
         transition: all 0.3s ease;
     }
-
+.bg-gradient-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
     .hamburger::before {
         top: -6px;
     }

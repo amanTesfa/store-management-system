@@ -3,7 +3,12 @@
 @{
     ViewData["Title"] = "Activity Logs";
 }
-
+<style>
+    #chatToggleBtn {
+        display: block !important;
+        background-color: #0d6efd !important;
+    }
+</style>
 <div class="mb-3">
     <h1 class="h3 d-inline align-middle">Activity Logs</h1>
     <span class="badge bg-dark text-white ms-2">Audit Trail</span>
@@ -89,6 +94,9 @@
 
 @section Scripts {
     <script>
+                // Chat functionality
+       
+
                        function showJsonPreview(id) {
             $('#jsonModal').modal('show');
             $('#jsonTableContent').html('<div class="text-center p-4">Loading...</div>');

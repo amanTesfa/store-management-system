@@ -360,6 +360,12 @@
                             <span class="align-middle">AI Training</span>
                         </a>
                     </li>
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AIIntelligence" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="AIIntelligence" asp-action="Index">
+                            <i class="align-middle" data-feather="cpu"></i>
+                            <span class="align-middle">AI Intelligence</span>
+                        </a>
+                    </li>
                     <li class="sidebar-item">
                         <a class="sidebar-link" asp-controller="Profile" asp-action="Index">
                             <i class="align-middle" data-feather="user"></i>

@@ -284,12 +284,7 @@
                             <li class="sidebar-item @(currentController == "SalesOrders" ? "active" : "")"><a class="sidebar-link" asp-controller="SalesOrders" asp-action="Index"><span class="align-middle">Sales Orders</span></a></li>
                             <li class="sidebar-item @(currentController == "Invoices" ? "active" : "")"><a class="sidebar-link" asp-controller="Invoices" asp-action="Index"><span class="align-middle">Invoices</span></a></li>
                             <li class="sidebar-item @(currentController == "CustomerReturns" ? "active" : "")"><a class="sidebar-link" asp-controller="CustomerReturns" asp-action="Index"><span class="align-middle">Customer Returns</span></a></li>
-                            <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReturns" ? "active" : "")">
-                                <a class="sidebar-link" asp-controller="CustomerReturns" asp-action="Index">
-                                   
-                                    <span class="align-middle">Customer Returns</span>
-                                </a>
-                            </li>
+                         
                         </ul>
                     </li>
 

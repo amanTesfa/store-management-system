@@ -122,6 +122,29 @@
         .js-simplebar {
             height: 100%;
         }
+
+        /* Submenu styling for collapsible parent items */
+        .sidebar-item.has-children > .sidebar-link {
+            cursor: pointer;
+        }
+
+        .sidebar-submenu {
+            display: none;
+            padding-left: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .sidebar-item.has-children.open > .sidebar-submenu {
+            display: block;
+        }
+
+        .sidebar-item.has-children .align-middle[data-feather="chevron-down"] {
+            transition: transform 0.2s ease;
+        }
+
+        .sidebar-item.has-children.open .align-middle[data-feather="chevron-down"] {
+            transform: rotate(180deg);
+        }
     </style>
 </head>
 
@@ -185,10 +208,10 @@
                 </a>
 
                 <ul class="sidebar-nav">
-                    <!-- MAIN NAVIGATION -->
-                    <li class="sidebar-header">
-                        Main
-                    </li>
+                    <!-- ============================================ -->
+                    <!-- 1. MAIN NAVIGATION -->
+                    <!-- ============================================ -->
+                    <li class="sidebar-header">Main</li>
 
                     <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
                         <a class="sidebar-link" asp-controller="Home" asp-action="Index">
@@ -197,191 +220,157 @@
                         </a>
                     </li>
 
-                    <!-- INVENTORY MANAGEMENT -->
+                    @{ var currentController = ViewContext.RouteData.Values["Controller"]?.ToString(); }
+
+                    @{ 
+                        var sysChildren = new[] { "SystemSetup", "Articles", "Categories", "Customers", "Suppliers", "BeginningBalance" };
+                        var sysOpen = sysChildren.Contains(currentController);
+                    }
+
                     <li class="sidebar-header">System Setup</li>
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" asp-controller="SystemSetup" asp-action="Index">
-                            <i class="align-middle" data-feather="settings"></i>
-                            <span class="align-middle">System Setup</span>
+                    <li class="sidebar-item has-children @(sysOpen ? "open" : "")" aria-expanded="@(sysOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="sys-setup-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="settings"></i>
+                                <span class="align-middle">System Setup</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
                         </a>
-                    </li>
-                
-
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Articles" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Articles" asp-action="Index">
-                            <i class="align-middle" data-feather="box"></i>
-                            <span class="align-middle">Articles</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "BeginningBalance" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="BeginningBalance" asp-action="Index">
-                            <i class="align-middle" data-feather="database"></i>
-                            <span class="align-middle">Beginning Balance</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Categories" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Categories" asp-action="Index">
-                            <i class="align-middle" data-feather="tag"></i>
-                            <span class="align-middle">Categories</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Customers" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Customers" asp-action="Index">
-                            <i class="align-middle" data-feather="users"></i>
-                            <span class="align-middle">Customers</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Suppliers" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Suppliers" asp-action="Index">
-                            <i class="align-middle" data-feather="truck"></i>
-                            <span class="align-middle">Suppliers</span>
-                        </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="sys-setup-submenu" style="display: @(sysOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "SystemSetup" ? "active" : "")"><a class="sidebar-link" asp-controller="SystemSetup" asp-action="Index"><span class="align-middle">System Setup</span></a></li>
+                            <li class="sidebar-item @(currentController == "Articles" ? "active" : "")"><a class="sidebar-link" asp-controller="Articles" asp-action="Index"><span class="align-middle">Articles</span></a></li>
+                            <li class="sidebar-item @(currentController == "Categories" ? "active" : "")"><a class="sidebar-link" asp-controller="Categories" asp-action="Index"><span class="align-middle">Categories</span></a></li>
+                            <li class="sidebar-item @(currentController == "Customers" ? "active" : "")"><a class="sidebar-link" asp-controller="Customers" asp-action="Index"><span class="align-middle">Customers</span></a></li>
+                            <li class="sidebar-item @(currentController == "Suppliers" ? "active" : "")"><a class="sidebar-link" asp-controller="Suppliers" asp-action="Index"><span class="align-middle">Suppliers</span></a></li>
+                            <li class="sidebar-item @(currentController == "BeginningBalance" ? "active" : "")"><a class="sidebar-link" asp-controller="BeginningBalance" asp-action="Index"><span class="align-middle">Beginning Balance</span></a></li>
+                        </ul>
                     </li>
 
-
-
-
-                    <!-- Transactions Section -->
+                    @{ 
+                        var purchaseChildren = new[] { "PurchaseOrders", "GoodsReceipts", "Returns" };
+                        var purchaseOpen = purchaseChildren.Contains(currentController);
+                    }
                     <li class="sidebar-header">Purchase Transactions</li>
-
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "PurchaseOrders" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="PurchaseOrders" asp-action="Index">
-                            <i class="align-middle" data-feather="shopping-cart"></i>
-                            <span class="align-middle">Purchase Orders</span>
+                    <li class="sidebar-item has-children @(purchaseOpen ? "open" : "")" aria-expanded="@(purchaseOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="purchase-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="shopping-cart"></i>
+                                <span class="align-middle">Purchase Transactions</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
                         </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="purchase-submenu" style="display: @(purchaseOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "PurchaseOrders" ? "active" : "")"><a class="sidebar-link" asp-controller="PurchaseOrders" asp-action="Index"><span class="align-middle">Purchase Orders</span></a></li>
+                            <li class="sidebar-item @(currentController == "GoodsReceipts" ? "active" : "")"><a class="sidebar-link" asp-controller="GoodsReceipts" asp-action="Index"><span class="align-middle">Goods Receipts</span></a></li>
+                            <li class="sidebar-item @(currentController == "Returns" ? "active" : "")"><a class="sidebar-link" asp-controller="Returns" asp-action="Index"><span class="align-middle">Purchase Returns</span></a></li>
+                        </ul>
                     </li>
 
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "GoodsReceipts" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="GoodsReceipts" asp-action="Index">
-                            <i class="align-middle" data-feather="package"></i>
-                            <span class="align-middle">Goods Receipts</span>
+                    @{ 
+                        var salesChildren = new[] { "SalesOrders", "Invoices", "CustomerReturns" };
+                        var salesOpen = salesChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Sales Transactions</li>
+                    <li class="sidebar-item has-children @(salesOpen ? "open" : "")" aria-expanded="@(salesOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="sales-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="shopping-bag"></i>
+                                <span class="align-middle">Sales Transactions</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
                         </a>
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Returns" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Returns" asp-action="Index">
-                            <i class="align-middle" data-feather="package"></i>
-                            <span class="align-middle">Returns</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "StockAdjustments" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="StockAdjustments" asp-action="Index">
-                            <i class="align-middle" data-feather="refresh-cw"></i>
-                            <span class="align-middle">Stock Adjustments</span>
-                        </a>
-                    </li>
-                    <!-- Sales & Customers Section -->
-                    <li class="sidebar-header">Sales Transaction</li>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="sales-submenu" style="display: @(salesOpen ? "block" : "none")">
 
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "SalesOrders" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="SalesOrders" asp-action="Index">
-                            <i class="align-middle" data-feather="shopping-bag"></i>
-                            <span class="align-middle">Sales Orders</span>
-                        </a>
-                    </li>
-
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Invoices" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Invoices" asp-action="Index">
-                            <i class="align-middle" data-feather="file-text"></i>
-                            <span class="align-middle">Invoices</span>
-                        </a>
+                            <li class="sidebar-item @(currentController == "SalesOrders" ? "active" : "")"><a class="sidebar-link" asp-controller="SalesOrders" asp-action="Index"><span class="align-middle">Sales Orders</span></a></li>
+                            <li class="sidebar-item @(currentController == "Invoices" ? "active" : "")"><a class="sidebar-link" asp-controller="Invoices" asp-action="Index"><span class="align-middle">Invoices</span></a></li>
+                            <li class="sidebar-item @(currentController == "CustomerReturns" ? "active" : "")"><a class="sidebar-link" asp-controller="CustomerReturns" asp-action="Index"><span class="align-middle">Customer Returns</span></a></li>
+                            <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReturns" ? "active" : "")">
+                                <a class="sidebar-link" asp-controller="CustomerReturns" asp-action="Index">
+                                   
+                                    <span class="align-middle">Customer Returns</span>
+                                </a>
+                            </li>
+                        </ul>
                     </li>
 
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "CustomerReturns" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="CustomerReturns" asp-action="Index">
-                            <i class="align-middle" data-feather="rotate-ccw"></i>
-                            <span class="align-middle">Customer Returns</span>
+                    @{ 
+                        var invChildren = new[] { "StockAdjustments" };
+                        var invOpen = invChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Inventory Adjustments</li>
+                    <li class="sidebar-item has-children @(invOpen ? "open" : "")" aria-expanded="@(invOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="inv-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="refresh-cw"></i>
+                                <span class="align-middle">Inventory Adjustments</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
                         </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="inv-submenu" style="display: @(invOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "StockAdjustments" ? "active" : "")"><a class="sidebar-link" asp-controller="StockAdjustments" asp-action="Index"><span class="align-middle">Stock Adjustments</span></a></li>
+                        </ul>
                     </li>
-                  
-                     
-                    <!-- REPORTS -->
-                    <li class="sidebar-header">Reports</li>
 
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Reports" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="Reports" asp-action="Index">
-                            <i class="align-middle" data-feather="bar-chart-2"></i>
-                            <span class="align-middle">Inventory Reports</span>
+                    @{ 
+                        var reportsChildren = new[] { "Reports", "AIIntelligence", "MLTraining" };
+                        var reportsOpen = reportsChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Reports & Analytics</li>
+                    <li class="sidebar-item has-children @(reportsOpen ? "open" : "")" aria-expanded="@(reportsOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="reports-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="bar-chart-2"></i>
+                                <span class="align-middle">Reports & Analytics</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
                         </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="reports-submenu" style="display: @(reportsOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "Reports" ? "active" : "")"><a class="sidebar-link" asp-controller="Reports" asp-action="Index"><span class="align-middle">Inventory Reports</span></a></li>
+                            <li class="sidebar-item @(currentController == "AIIntelligence" ? "active" : "")"><a class="sidebar-link" asp-controller="AIIntelligence" asp-action="Index"><span class="align-middle">AI Intelligence</span></a></li>
+                            <li class="sidebar-item @(currentController == "MLTraining" ? "active" : "")"><a class="sidebar-link" asp-controller="MLTraining" asp-action="Index"><span class="align-middle">AI Training</span></a></li>
+                        </ul>
                     </li>
+
                     @if (User.IsInRole("Admin"))
                     {
-                        <li class="sidebar-header">Activity Logs</li>
-
-                        <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "ActivityLogs" ? "active" : "")">
-                            <a class="sidebar-link" asp-controller="ActivityLogs" asp-action="Index">
-                                <i class="align-middle" data-feather="clock"></i>
-                                <span class="align-middle">Activity Logs</span>
+                        var adminChildren = new[] { "ActivityLogs" };
+                        var adminOpen = adminChildren.Contains(currentController);
+                        <li class="sidebar-header">Administration</li>
+                        <li class="sidebar-item has-children @(adminOpen ? "open" : "")" aria-expanded="@(adminOpen.ToString().ToLower())">
+                            <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="admin-submenu">
+                                <span class="d-flex align-items-center w-100">
+                                    <i class="align-middle me-2" data-feather="clock"></i>
+                                    <span class="align-middle">Administration</span>
+                                    <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                                </span>
                             </a>
+                            <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="admin-submenu" style="display: @(adminOpen ? "block" : "none")">
+                                <li class="sidebar-item @(currentController == "ActivityLogs" ? "active" : "")"><a class="sidebar-link" asp-controller="ActivityLogs" asp-action="Index"><span class="align-middle">Activity Logs</span></a></li>
+                            </ul>
                         </li>
                     }
-                    <!-- ADMINISTRATION (Visible only to Admin) -->
-                    @* @if (User.IsInRole("Admin"))
-                    {
-                        <li class="sidebar-header">
-                            Administration
-                        </li>
 
-                        <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Users" ? "active" : "")">
-                            <a class="sidebar-link" asp-controller="Users" asp-action="Index">
-                                <i class="align-middle" data-feather="user-check"></i>
-                                <span class="align-middle">User Management</span>
-                            </a>
-                        </li>
-
-                        <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Roles" ? "active" : "")">
-                            <a class="sidebar-link" asp-controller="Roles" asp-action="Index">
-                                <i class="align-middle" data-feather="shield"></i>
-                                <span class="align-middle">Role Management</span>
-                            </a>
-                        </li>
-
-                        <li class="sidebar-item">
-                            <a class="sidebar-link" href="#">
-                                <i class="align-middle" data-feather="database"></i>
-                                <span class="align-middle">Backup & Restore</span>
-                            </a>
-                        </li>
-
-                        <li class="sidebar-item">
-                            <a class="sidebar-link" href="#">
-                                <i class="align-middle" data-feather="settings"></i>
-                                <span class="align-middle">System Settings</span>
-                            </a>
-                        </li>
-                    } *@
-
-                    <!-- USER SECTION -->
-                    <li class="sidebar-header">
-                        Account
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "MLTraining" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="MLTraining" asp-action="Index">
-                            <i class="align-middle" data-feather="cpu"></i>
-                            <span class="align-middle">AI Training</span>
+                    @{ 
+                        var accountChildren = new[] { "Profile" };
+                        var accountOpen = accountChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Account</li>
+                    <li class="sidebar-item has-children @(accountOpen ? "open" : "")" aria-expanded="@(accountOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="account-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="user"></i>
+                                <span class="align-middle">Account</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
                         </a>
-                    </li>
-                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "AIIntelligence" ? "active" : "")">
-                        <a class="sidebar-link" asp-controller="AIIntelligence" asp-action="Index">
-                            <i class="align-middle" data-feather="cpu"></i>
-                            <span class="align-middle">AI Intelligence</span>
-                        </a>
-                    </li>
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" asp-controller="Profile" asp-action="Index">
-                            <i class="align-middle" data-feather="user"></i>
-                            <span class="align-middle">My Profile</span>
-                        </a>
-                    </li>
-
-                    <li class="sidebar-item">
-                        <a class="sidebar-link" asp-controller="Profile" asp-action="ChangePassword">
-                            <i class="align-middle" data-feather="key"></i>
-                            <span class="align-middle">Change Password</span>
-                        </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="account-submenu" style="display: @(accountOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "Profile" ? "active" : "")"><a class="sidebar-link" asp-controller="Profile" asp-action="Index"><span class="align-middle">My Profile</span></a></li>
+                            <li class="sidebar-item"><a class="sidebar-link" asp-controller="Profile" asp-action="ChangePassword"><span class="align-middle">Change Password</span></a></li>
+                        </ul>
                     </li>
                 </ul>
 
-                <!-- Sidebar CTA (Optional - can remove if not needed) -->
+                @* <!-- Sidebar CTA (Optional - can remove if not needed) -->
                 <div class="sidebar-cta">
                     <div class="sidebar-cta-content">
                         <strong class="d-inline-block mb-2">Need Help?</strong>
@@ -392,7 +381,7 @@
                             <a href="#" class="btn btn-primary">Contact Support</a>
                         </div>
                     </div>
-                </div>
+                </div> *@
             </div>
         </nav>
 
@@ -531,6 +520,22 @@
                     document.querySelector("#sidebar").classList.toggle("collapsed");
                 });
             }
+
+            // Initialize collapsible submenu toggles
+            document.querySelectorAll('.sidebar-parent-toggle').forEach(function(toggle) {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var parent = toggle.closest('.has-children');
+                    if (!parent) return;
+                    var submenu = parent.querySelector('.sidebar-submenu');
+                    var isOpen = parent.classList.toggle('open');
+                    if (submenu) {
+                        submenu.style.display = isOpen ? 'block' : 'none';
+                    }
+                    // update aria-expanded
+                    parent.setAttribute('aria-expanded', isOpen.toString());
+                });
+            });
         });
     </script>
 

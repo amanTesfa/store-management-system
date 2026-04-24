@@ -143,7 +143,7 @@ namespace Store_Management_System.ViewModels
 
     // ==================== CUSTOMER RETURN ====================
 
-    public class CustomerReturnViewModel
+    public class CustomerReturnViewModel2
     {
         public int Id { get; set; }
         public string ReturnNumber { get; set; } = string.Empty;
@@ -167,13 +167,13 @@ namespace Store_Management_System.ViewModels
         public string? Remarks { get; set; }
         public string Status { get; set; } = "Draft";
 
-        public List<CustomerReturnLineViewModel> Lines { get; set; } = new();
+        public List<CustomerReturnLineViewModel2> Lines { get; set; } = new();
 
         public SelectList Invoices { get; set; }
         public SelectList Warehouses { get; set; }
     }
 
-    public class CustomerReturnLineViewModel
+    public class CustomerReturnLineViewModel2
     {
         public int Id { get; set; }
         public int InvoiceLineId { get; set; }

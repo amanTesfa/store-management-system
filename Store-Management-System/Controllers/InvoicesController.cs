@@ -48,7 +48,7 @@ namespace Store_Management_System.Controllers
                 .Skip((page - 1) * pageSize)
                 .Take(pageSize)
                 .Select(v => new InvoiceListViewModel
-                {
+                { 
                     Id = v.Id,
                     InvoiceNumber = v.VoucherNumber,
                     CustomerName = v.Consignee != null ? v.Consignee.ConsigneeName : "",
@@ -80,7 +80,7 @@ namespace Store_Management_System.Controllers
                 TotalPages = totalPages,
                 PageSize = pageSize,
                 Statuses = new SelectList(statuses, "Value", "Text", status)
-            };
+            }   ;
 
             return View(model);
         }

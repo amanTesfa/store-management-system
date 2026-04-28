@@ -9,9 +9,14 @@
         <h1 class="h3 d-inline align-middle">Beginning Balances</h1>
         <span class="badge bg-dark text-white ms-2">Opening Stock</span>
     </div>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="align-middle" data-feather="plus"></i> New Beginning Balance
-    </a>
+    <div class="d-flex gap-2">
+        <a asp-action="Import" class="btn btn-outline-primary">
+            <i class="align-middle" data-feather="upload"></i> Import
+        </a>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="align-middle" data-feather="plus"></i> New Beginning Balance
+        </a>
+    </div>
 </div>
 
 <div class="card">

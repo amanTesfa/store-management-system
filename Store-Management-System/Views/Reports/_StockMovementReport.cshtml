@@ -1,0 +1,116 @@
+﻿@model List<StockMovementReportViewModel>
+@Html.AntiForgeryToken()
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="row g-2 w-100">
+        <div class="col-md-2">
+            <input type="date" id="fromDate" class="form-control" value="@ViewBag.FromDate" />
+        </div>
+        <div class="col-md-2">
+            <input type="date" id="toDate" class="form-control" value="@ViewBag.ToDate" />
+        </div>
+        <div class="col-md-3">
+            <select id="articleFilter" class="form-select" asp-items="ViewBag.Articles"></select>
+        </div>
+        <div class="col-md-2">
+            <select id="movementTypeFilter" class="form-select" asp-items="ViewBag.MovementTypes"></select>
+        </div>
+        <div class="col-md-1">
+            <button class="btn btn-primary w-100" id="applyFilterBtn">Apply</button>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-success w-100" id="exportExcelBtn2">
+                <i class="align-middle" data-feather="download"></i> Export CSV
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="table-responsive table-scrollable">
+    <table class="table table-bordered table-hover datatable">
+        <thead class="table-light">
+            <tr>
+                <th>Date</th>
+                <th>Reference</th>
+                <th>SKU</th>
+                <th>Product</th>
+                <th>Type</th>
+                <th class="text-end">Quantity</th>
+                <th class="text-end">Unit Cost</th>
+                <th class="text-end">Total</th>
+                <th>PO/Ref</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in Model)
+            {
+                <tr>
+                    <td>@item.MovementDate.ToString("yyyy-MM-dd")</td>
+                    <td><code>@item.MovementNumber</code></td>
+                    <td>@item.ArticleCode</td>
+                    <td>@item.ArticleName</td>
+
+                    <td>
+                        @{
+                            var typeClass = item.MovementType == "In" ? "bg-success" :
+                            item.MovementType == "Out" ? "bg-danger" :
+                            item.MovementType == "Beginning" ? "bg-info" : "bg-warning";
+                        }
+                        <span class="badge @typeClass">@item.MovementType</span>
+                    </td>
+
+                    <td class="text-end @(item.Quantity > 0 ? "text-success" : "text-danger")">
+                        @item.Quantity.ToString("N2")
+                    </td>
+
+                    <td class="text-end">@item.UnitCost.ToString("C")</td>
+                    <td class="text-end">@item.TotalCost.ToString("C")</td>
+                    <td>@item.ReferenceNumber</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+<script>
+    $('#applyFilterBtn').on('click', function () {
+        var fromDate = $('#fromDate').val();
+        var toDate = $('#toDate').val();
+        var articleId = $('#articleFilter').val();
+        var movementType = $('#movementTypeFilter').val();
+
+        $.ajax({
+            url: '@Url.Action("StockMovement", "Reports")',
+            type: 'GET',
+            data: {
+                fromDate: fromDate,
+                toDate: toDate,
+                articleId: articleId,
+                movementType: movementType
+            },
+            success: function (response) {
+                $('#stockMovementContent').html(response);
+                feather.replace();
+            }
+        });
+    });
+
+        $('#exportExcelBtn2').on('click', function () {
+
+        var fromDate = $('#fromDate').val();
+        var toDate = $('#toDate').val();
+        var articleId = $('#articleFilter').val();
+        var movementType = $('#movementTypeFilter').val();
+        var form = $('<form action="@Url.Action("ExportStockMovementToExcel", "Reports")" method="post"></form>');
+        form.append('<input type="hidden" name="fromDate" value="' + fromDate + '" />');
+        form.append('<input type="hidden" name="toDate" value="' + toDate + '" />');
+        form.append('<input type="hidden" name="articleId" value="' + articleId + '" />');
+        form.append('<input type="hidden" name="movementType" value="' + movementType + '" />');
+        form.append('<input type="hidden" name="__RequestVerificationToken" value="' + $('input[name="__RequestVerificationToken"]').val() + '" />');
+
+        console.log('Form created, submitting...');  // Add this debug line
+
+        $('body').append(form);
+        form.submit();
+        form.remove();
+    });
+</script>

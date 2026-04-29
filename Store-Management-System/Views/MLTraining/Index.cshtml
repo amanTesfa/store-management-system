@@ -1,0 +1,335 @@
+﻿@{
+    ViewData["Title"] = "AI Model Training";
+    var hasSampleData = ViewBag.HasSampleData;
+    var sampleDataCount = ViewBag.SampleDataCount;
+    var realDataCount = ViewBag.RealDataCount;
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">AI Model Training</h1>
+    <span class="badge bg-dark text-white ms-2">Machine Learning</span>
+</div>
+
+<div class="alert alert-info">
+    <i class="align-middle" data-feather="info"></i>
+    <strong>How it works:</strong> Generate sample data → Train model → Test predictions → After 6 months, retrain with real data!
+</div>
+
+<div class="row">
+    <!-- Sample Data Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="card-title mb-0">Sample Data Generator</h5>
+            </div>
+            <div class="card-body">
+                <div id="sampleDataStatus" class="alert @(hasSampleData ? "alert-success" : "alert-warning")">
+                    @if (hasSampleData)
+                    {
+                        <i class="align-middle" data-feather="check-circle"></i>
+                        <span>Sample data available: <strong>@sampleDataCount</strong> records</span>
+                    }
+                    else
+                    {
+                        <i class="align-middle" data-feather="alert-triangle"></i>
+                        <span>No sample data. Generate to start training.</span>
+                    }
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Months of History</label>
+                        <select id="monthsSelect" class="form-select">
+                            <option value="6">6 months</option>
+                            <option value="12" selected>12 months</option>
+                            <option value="18">18 months</option>
+                            <option value="24">24 months</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">&nbsp;</label>
+                        <button id="generateBtn" class="btn btn-primary w-100">
+                            <i class="align-middle" data-feather="database"></i> Generate Sample Data
+                        </button>
+                    </div>
+                </div>
+
+                @if (hasSampleData)
+                {
+                    <div class="mt-3">
+                        <button id="clearBtn" class="btn btn-outline-danger w-100">
+                            <i class="align-middle" data-feather="trash-2"></i> Clear Sample Data
+                        </button>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Training Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-success text-white">
+                <h5 class="card-title mb-0">Model Training</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info" id="dataInfo">
+                    <strong>Data Available:</strong><br>
+                    Sample data: @sampleDataCount records<br>
+                    Real data: @realDataCount records
+                </div>
+
+                <div class="mb-3">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" id="useSampleData" checked>
+                        <label class="form-check-label" for="useSampleData">
+                            Use Sample Data for Training
+                        </label>
+                    </div>
+                    <small class="text-muted">
+                        When checked: Trains on generated sample data<br>
+                        When unchecked: Trains on real sales data (recommended after 6+ months)
+                    </small>
+                </div>
+
+                <button id="trainBtn" class="btn btn-success w-100" @(!hasSampleData ? "disabled" : "")>
+                    <i class="align-middle" data-feather="cpu"></i> Train Model
+                </button>
+
+                <div id="trainingStatus" class="mt-3" style="display: none;">
+                    <div class="progress">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" style="width: 100%">
+                            Training in progress...
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <!-- Test Prediction Section -->
+    <!-- Test Prediction Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">Test Prediction</h5>
+            </div>
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Select Product</label>
+                    <select id="productSelect" class="form-select">
+                        <option value="">-- Select Product --</option>
+                    </select>
+                </div>
+
+                <button id="testBtn" class="btn btn-info w-100">
+                    <i class="align-middle" data-feather="bar-chart-2"></i> Test Prediction
+                </button>
+
+                <!-- This div needs to exist and be visible -->
+                <div id="predictionResult" class="mt-3" style="display: none;">
+                    <div class="alert alert-success">
+                        <strong>Prediction Result:</strong>
+                        <div id="predictionDetails"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Future Retraining Section -->
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header bg-warning">
+                <h5 class="card-title mb-0">Future Retraining</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-secondary">
+                    <i class="align-middle" data-feather="clock"></i>
+                    <strong>When you have enough real data (6+ months):</strong>
+                    <ol class="mt-2 mb-0">
+                        <li>Uncheck "Use Sample Data" above</li>
+                        <li>Click "Train Model" again</li>
+                        <li>Model will retrain on REAL data</li>
+                        <li>Predictions will become accurate</li>
+                    </ol>
+                </div>
+
+                @if (realDataCount >= 50)
+                {
+                    <div class="alert alert-success">
+                        <i class="align-middle" data-feather="check-circle"></i>
+                        You have enough real data (@realDataCount records) to train on real data!
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">
+                        <i class="align-middle" data-feather="info"></i>
+                        Need at least 50 real sales records for reliable ML. Current: @realDataCount records.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // Load products for dropdown
+        function loadProducts() {
+            $.ajax({
+                url: '@Url.Action("GetProducts", "MLTraining")',
+                type: 'GET',
+                success: function(response) {
+                    var select = $('#productSelect');
+                    select.empty().append('<option value="">-- Select Product --</option>');
+                    $.each(response, function(i, product) {
+                        select.append($('<option></option>').val(product.id).text(product.name));
+                    });
+                    $('#testBtn').prop('disabled', false);
+                }
+            });
+        }
+
+        loadProducts();
+
+        // Generate sample data
+        $('#generateBtn').on('click', function() {
+            var months = $('#monthsSelect').val();
+
+            $('#generateBtn').prop('disabled', true).html('<i class="align-middle" data-feather="loader"></i> Generating...');
+
+            $.ajax({
+                url: '@Url.Action("GenerateSampleData", "MLTraining")',
+                type: 'POST',
+                data: { months: months },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('success', response.message);
+                        setTimeout(function() { location.reload(); }, 2000);
+                    } else {
+                        showToast('error', response.message);
+                        $('#generateBtn').prop('disabled', false).html('<i class="align-middle" data-feather="database"></i> Generate Sample Data');
+                    }
+                },
+                error: function() {
+                    showToast('error', 'Generation failed');
+                    $('#generateBtn').prop('disabled', false).html('<i class="align-middle" data-feather="database"></i> Generate Sample Data');
+                }
+            });
+        });
+
+        // Clear sample data
+        $('#clearBtn').on('click', function() {
+            if (confirm('Are you sure you want to clear all sample data? This action cannot be undone.')) {
+                $('#clearBtn').prop('disabled', true).html('<i class="align-middle" data-feather="loader"></i> Clearing...');
+
+                $.ajax({
+                    url: '@Url.Action("ClearSampleData", "MLTraining")',
+                    type: 'POST',
+                    success: function(response) {
+                        if (response.success) {
+                            showToast('success', response.message);
+                            setTimeout(function() { location.reload(); }, 2000);
+                        } else {
+                            showToast('error', response.message);
+                            $('#clearBtn').prop('disabled', false).html('<i class="align-middle" data-feather="trash-2"></i> Clear Sample Data');
+                        }
+                    },
+                    error: function() {
+                        showToast('error', 'Clear failed');
+                        $('#clearBtn').prop('disabled', false).html('<i class="align-middle" data-feather="trash-2"></i> Clear Sample Data');
+                    }
+                });
+            }
+        });
+
+        // Train model
+        $('#trainBtn').on('click', function() {
+            var useSampleData = $('#useSampleData').is(':checked');
+            var dataType = useSampleData ? 'sample' : 'real';
+
+            $('#trainBtn').prop('disabled', true).html('<i class="align-middle" data-feather="loader"></i> Training...');
+            $('#trainingStatus').show();
+
+            $.ajax({
+                url: '@Url.Action("Train", "MLTraining")',
+                type: 'POST',
+                data: { useSampleData: useSampleData },
+                success: function(response) {
+                    $('#trainingStatus').hide();
+                    if (response.success) {
+                        showToast('success', response.message);
+                        $('#trainBtn').prop('disabled', false).html('<i class="align-middle" data-feather="cpu"></i> Train Model');
+                    } else {
+                        showToast('error', response.message);
+                        $('#trainBtn').prop('disabled', false).html('<i class="align-middle" data-feather="cpu"></i> Train Model');
+                    }
+                },
+                error: function() {
+                    $('#trainingStatus').hide();
+                    showToast('error', 'Training failed');
+                    $('#trainBtn').prop('disabled', false).html('<i class="align-middle" data-feather="cpu"></i> Train Model');
+                }
+            });
+        });
+
+        // Test prediction
+               // Test prediction
+        $('#testBtn').on('click', function() {
+            var productId = $('#productSelect').val();
+            console.log('Test button clicked, productId:', productId);
+
+            if (!productId) {
+                showToast('warning', 'Please select a product');
+                return;
+            }
+
+            $('#testBtn').prop('disabled', true).html('<i class="align-middle" data-feather="loader"></i> Predicting...');
+
+            $.ajax({
+                url: '@Url.Action("TestPrediction", "MLTraining")',
+                type: 'POST',
+                data: { productId: productId },
+                       success: function(response) {
+            console.log('AJAX Success - Response:', response);
+            $('#testBtn').prop('disabled', false).html('<i class="align-middle" data-feather="bar-chart-2"></i> Test Prediction');
+
+            if (response.success && response.prediction) {
+                var p = response.prediction;
+
+                var html = `
+                    <strong>Product:</strong> ${p.productName}<br>
+                    <strong>Period:</strong> ${p.month}/${p.year}<br>
+                    <strong>Predicted Sales:</strong> ${Math.round(p.predictedSales)} units<br>
+                    <strong>Confidence:</strong> ${Math.round(p.confidence * 100)}%<br>
+                    <strong>Recommendation:</strong> ${p.recommendation}
+                `;
+                $('#predictionDetails').html(html);
+                $('#predictionResult').show(); 
+                console.log('Prediction displayed');
+            }
+        },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', status, error);
+                    console.error('Response:', xhr.responseText);
+                    $('#testBtn').prop('disabled', false).html('<i class="align-middle" data-feather="bar-chart-2"></i> Test Prediction');
+                    showToast('error', 'Prediction failed. Check console for details.');
+                }
+            });
+        });
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : (type === 'warning' ? 'bg-warning' : 'bg-danger');
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+    </script>
+}

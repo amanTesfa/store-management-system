@@ -13,7 +13,7 @@ public partial class Voucher
 
     public int ActivityId { get; set; }
 
-    public int? ConsignorId { get; set; }
+   // public int? ConsignorId { get; set; }
 
     public int? ConsigneeId { get; set; }
 
@@ -56,9 +56,39 @@ public partial class Voucher
     public DateTime? UpdatedAt { get; set; }
 
     public int? UpdatedBy { get; set; }
-
+    public int? WarehouseId { get; set; }
+    public DateOnly? ExpectedDate { get; set; }
+    public DateTime? SentToSupplierAt { get; set; }
+    public DateTime? PartiallyReceivedAt { get; set; }
+    public DateTime? FullyReceivedAt { get; set; }
+    public decimal? ShippingCost { get; set; }
+    public decimal? HandlingCost { get; set; }
+    public decimal? InsuranceCost { get; set; }
+    public decimal? OtherCost { get; set; }
+    public decimal? TotalLandedCost { get; set; }
+    public string? LandedCostDistributionMethod { get; set; }
+    public bool IsReturn { get; set; }
+    public int? OriginalVoucherId { get; set; }
+    public string? ReturnReason { get; set; }
+    public int? SupplierId { get; set; }
+    public DateOnly? DeliveryDate { get; set; }
+    public string? ShippingAddress { get; set; }
+    public string? BillingAddress { get; set; }
+    public DateTime? ShippedDate { get; set; }
+    public decimal? ShippingCharge { get; set; }
+    public DateTime? CompletedDate { get; set; }
+    public DateTime? PaidAt { get; set; }
+    public string? PaymentReference { get; set; }
+ 
+    // Navigation property
+    public virtual Supplier? Supplier { get; set; }
+    public string? ApprovalComments { get; set; }
+    public virtual Voucher? OriginalVoucher { get; set; }
+    public virtual ICollection<Voucher> ReturnVouchers { get; set; } = new List<Voucher>();
+    public virtual User? ApprovedByNavigation { get; set; }
     public virtual ICollection<AccountLedger> AccountLedgers { get; set; } = new List<AccountLedger>();
-
+    // Add these navigation properties
+    public virtual Warehouse? Warehouse { get; set; }
     public virtual Activity Activity { get; set; } = null!;
 
     public virtual ICollection<ClosedRelation> ClosedRelationClosingVouchers { get; set; } = new List<ClosedRelation>();
@@ -67,7 +97,7 @@ public partial class Voucher
 
     public virtual Consignee? Consignee { get; set; }
 
-    public virtual Consignor? Consignor { get; set; }
+   // public virtual Consignor? Consignor { get; set; }
 
     public virtual ICollection<StockMovement> StockMovements { get; set; } = new List<StockMovement>();
 

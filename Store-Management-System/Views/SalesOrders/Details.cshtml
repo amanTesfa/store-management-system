@@ -1,0 +1,325 @@
+﻿@model Voucher
+
+@{
+    ViewData["Title"] = "Sales Order Details";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">Sales Order Details</h1>
+    <span class="badge bg-dark text-white ms-2">@Model.VoucherNumber</span>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Order Information</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive table-scrollable">
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 35%">SO Number</th>
+                        <td><code>@Model.VoucherNumber</code></td>
+                    </tr>
+                    <tr>
+                        <th>Customer</th>
+                        <td>@(Model.Consignee?.ConsigneeName ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Order Date</th>
+                        <td>@Model.VoucherDate.ToString("yyyy-MM-dd")</td>
+                    </tr>
+                    <tr>
+                        <th>Delivery Date</th>
+                        <td>@(Model.DeliveryDate?.ToString("yyyy-MM-dd") ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Status</th>
+                        <td>
+                            @{
+                                var statusClass = Model.Status == "Draft" ? "warning" :
+                                Model.Status == "Approved" ? "info" :
+                                Model.Status == "Shipped" ? "primary" :
+                                Model.Status == "Completed" ? "success" : "danger";
+                            }
+                            <span class="badge bg-@statusClass">@Model.Status</span>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Warehouse</th>
+                        <td>@(Model.Warehouse?.WarehouseName ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Shipping Charge</th>
+                        <td class="text-end">@((Model.ShippingCharge ?? 0).ToString("C"))</td>
+                    </tr>
+                    <tr>
+                        <th>Shipping Address</th>
+                        <td class="text-end">@(Model.ShippingAddress ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Billing Address</th>
+                        <td>@(Model.BillingAddress ?? Model.Consignee?.BillingAddress ?? "N/A")</td>
+                    </tr>
+                    <tr>
+                        <th>Remarks</th>
+                        <td>@(Model.Remarks ?? "N/A")</td>
+                    </tr>
+                </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Financial Summary</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive table-scrollable">
+                <table class="table table-bordered">
+                    <tr>
+                        <th style="width: 50%">Subtotal</th>
+                        <td class="text-end">@Model.SubTotal.ToString("C")</td>
+                    </tr>
+                    @if (Model.DiscountAmount > 0)
+                    {
+                        <tr>
+                            <th>Discount</th>
+                            <td class="text-end text-danger">-@Model.DiscountAmount.ToString("C")</td>
+                        </tr>
+                    }
+                    @if (Model.TaxAmount > 0)
+                    {
+                        <tr>
+                            <th>Tax</th>
+                            <td class="text-end">@Model.TaxAmount.ToString("C")</td>
+                        </tr>
+                    }
+                    @if ((Model.ShippingCharge ?? 0) > 0)
+                    {
+                        <tr>
+                            <th>Shipping</th>
+                            <td class="text-end">@(Model.ShippingCharge?.ToString("C") ?? "$0.00")</td>
+                        </tr>
+                    }
+                    <tr class="fw-bold">
+                        <th>Total Amount</th>
+                        <td class="text-end">@Model.TotalAmount.ToString("C")</td>
+                    </tr>
+                </table>
+                </div>
+            </div>
+        </div>
+
+        @if (Model.Status == "Approved" || Model.Status == "Shipped")
+        {
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Approval Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive table-scrollable">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Approved At</th>
+                            <td>@(Model.ApprovedAt?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")</td>
+                        </tr>
+                        <tr>
+                            <th>Approved By</th>
+                            <td>@(Model.ApprovedByNavigation?.UserName ?? "N/A")</td>
+                        </tr>
+                        <tr>
+                            <th>Approval Comments</th>
+                            <td>@(Model.ApprovalComments ?? "N/A")</td>
+                        </tr>
+                    </table>
+                    </div>
+                </div>
+            </div>
+        }
+
+        @if (Model.Status == "Shipped" || Model.Status == "Completed")
+        {
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Shipping Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive table-scrollable">
+                    <table class="table table-bordered">
+                        <tr>
+                            <th>Shipped Date</th>
+                            <td>@(Model.ShippedDate?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")</td>
+                        </tr>
+                        @if (Model.Status == "Completed")
+                        {
+                            <tr>
+                                <th>Completed Date</th>
+                                <td>@(Model.CompletedDate?.ToString("MMM dd, yyyy HH:mm") ?? "N/A")</td>
+                            </tr>
+                        }
+                    </table>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mt-3">
+    <div class="card-header">
+        <h5 class="card-title mb-0">Line Items</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive table-scrollable">
+            <table class="table table-bordered mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Product</th>
+                        <th class="text-end">Quantity</th>
+                        <th class="text-end">Unit Price</th>
+                        <th class="text-end">Discount</th>
+                        <th class="text-end">Total</th>
+                        <th class="text-end">Shipped</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var line in Model.VoucherLines)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@line.Article?.ArticleCode</strong><br />
+                                <small class="text-muted">@line.Article?.ArticleName</small>
+                            </td>
+                            <td class="text-end">@line.Quantity.ToString("N2")</td>
+                            <td class="text-end">@line.UnitPrice.ToString("C")</td>
+                            <td class="text-end">@(line.DiscountPercent.ToString("N0") ?? "0")%</td>
+                            <td class="text-end">@line.LineTotal.ToString("C")</td>
+                            <td class="text-end">@(line.ShippedQuantity?.ToString("N2") ?? "0")</td>
+                        </tr>
+                    }
+                </tbody>
+                <tfoot class="table-light">
+                    <tr class="fw-bold">
+                        <td colspan="4" class="text-end">Total:</td>
+                        <td class="text-end">@Model.TotalAmount.ToString("C")</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="mt-3 d-flex justify-content-between">
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="align-middle" data-feather="arrow-left"></i> Back to List
+    </a>
+    <div>
+        @if (Model.Status == "Draft")
+        {
+            <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">
+                <i class="align-middle" data-feather="edit-2"></i> Edit
+            </a>
+            <button type="button" class="btn btn-success" onclick="approveSO(@Model.Id)">
+                <i class="align-middle" data-feather="check-circle"></i> Approve
+            </button>
+            <button type="button" class="btn btn-danger" onclick="cancelSO(@Model.Id)">
+                <i class="align-middle" data-feather="x-circle"></i> Cancel
+            </button>
+        }
+        @if (Model.Status == "Approved")
+        {
+            <button type="button" class="btn btn-primary" onclick="shipSO(@Model.Id)">
+                <i class="align-middle" data-feather="truck"></i> Mark as Shipped
+            </button>
+            <a asp-controller="Invoices" asp-action="Create" asp-route-soId="@Model.Id" class="btn btn-success">
+                <i class="align-middle" data-feather="file-text"></i> Generate Invoice
+            </a>
+        }
+        @if (Model.Status == "Shipped")
+        {
+            <button type="button" class="btn btn-success" onclick="completeSO(@Model.Id)">
+                <i class="align-middle" data-feather="check"></i> Complete Order
+            </button>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        function approveSO(id) {
+            if (confirm('Approve this sales order? This will reserve stock.')) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Approve", "SalesOrders")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); setTimeout(function() { location.reload(); }, 1500); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function shipSO(id) {
+            if (confirm('Mark this sales order as shipped?')) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Ship", "SalesOrders")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); setTimeout(function() { location.reload(); }, 1500); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function completeSO(id) {
+            if (confirm('Complete this sales order? This will update stock levels.')) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Complete", "SalesOrders")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); setTimeout(function() { location.reload(); }, 1500); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function cancelSO(id) {
+            var reason = prompt('Enter cancellation reason:');
+            if (reason) {
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Cancel", "SalesOrders")',
+                    type: 'POST',
+                    data: { id: id, reason: reason, __RequestVerificationToken: token },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); setTimeout(function() { location.reload(); }, 1500); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+    </script>
+}

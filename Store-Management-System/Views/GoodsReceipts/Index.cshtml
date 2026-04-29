@@ -1,0 +1,109 @@
+﻿@model GoodsReceiptIndexViewModel
+
+@{
+    ViewData["Title"] = "Goods Receipts";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Goods Receipts</h1>
+        <span class="badge bg-dark text-white ms-2">Inbound</span>
+    </div>
+    <a asp-action="Create" class="btn btn-primary">
+        <i class="align-middle" data-feather="plus"></i> New Goods Receipt
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by GRN # or Supplier..." value="@Model.SearchTerm" />
+                    <button class="btn btn-outline-primary" id="searchBtn">
+                        <i class="align-middle" data-feather="search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive table-scrollable">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>GRN #</th>
+                        <th>PO #</th>
+                        <th>Supplier</th>
+                        <th>Receipt Date</th>
+                        <th>Items</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.GoodsReceipts.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="align-middle" data-feather="package" style="width: 48px; height: 48px;"></i>
+                                <p class="mt-2 mb-0">No goods receipts found.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var grn in Model.GoodsReceipts)
+                        {
+                            <tr>
+                                <td><code>@grn.VoucherNumber</code></td>
+                                <td>@grn.PONumber</td>
+                                <td><strong>@grn.SupplierName</strong></td>
+                                <td>@grn.ReceiptDate.ToString("yyyy-MM-dd")</td>
+                                <td><span class="badge bg-info">@grn.ItemCount</span></td>
+                                <td><span class="badge bg-success">@grn.Status</span></td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@grn.Id" class="btn btn-sm btn-info" title="View">
+                                            <i class="align-middle" data-feather="eye"></i>
+                                        </a>
+                                        <a asp-controller="Returns" asp-action="Create" asp-route-receiptId="@grn.Id" class="btn btn-sm btn-warning" title="Return to Supplier">
+                                            <i class="align-middle" data-feather="rotate-ccw"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between">
+            <small>Page @Model.CurrentPage of @Model.TotalPages</small>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" disabled="@(Model.CurrentPage <= 1)">Previous</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" disabled="@(Model.CurrentPage >= Model.TotalPages)">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var currentPage = @Model.CurrentPage;
+        var searchTerm = '@Model.SearchTerm';
+
+        function refreshPage() {
+            var url = '@Url.Action("Index", "GoodsReceipts")?searchTerm=' + encodeURIComponent(searchTerm) + '&page=' + currentPage;
+            window.location.href = url;
+        }
+
+        function previousPage() { if (currentPage > 1) { currentPage--; refreshPage(); } }
+        function nextPage() { currentPage++; refreshPage(); }
+
+        $('#searchBtn').on('click', function() { searchTerm = $('#searchInput').val(); currentPage = 1; refreshPage(); });
+        $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); currentPage = 1; refreshPage(); } });
+    </script>
+}

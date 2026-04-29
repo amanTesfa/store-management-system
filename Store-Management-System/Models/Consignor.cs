@@ -5,6 +5,7 @@ namespace Store_Management_System.Models;
 
 public partial class Consignor
 {
+   // public string Name { get; set; } = null!;
     public int Id { get; set; }
 
     public string ConsignorCode { get; set; } = null!;
@@ -42,6 +43,7 @@ public partial class Consignor
     public decimal? CreditLimit { get; set; }
 
     public bool IsActive { get; set; }
+    public bool IsDeleted { get; set; }
 
     public int? Rating { get; set; }
 

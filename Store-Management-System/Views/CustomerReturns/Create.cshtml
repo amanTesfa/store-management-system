@@ -1,0 +1,201 @@
+﻿@model CustomerReturnViewModel
+@{
+    ViewData["Title"] = "Create Customer Return";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">Customer Return</h1>
+    <span class="badge bg-dark text-white ms-2">Credit Note</span>
+</div>
+
+<form id="mainForm" method="post">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="ReturnNumber" />
+    <input type="hidden" asp-for="Status" />
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Return Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label asp-for="ReturnNumber" class="form-label">Return Number (CRN)</label>
+                        <input asp-for="ReturnNumber" class="form-control" readonly style="background-color: #e9ecef;" />
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="OriginalInvoiceId" class="form-label">Original Invoice *</label>
+                        <select asp-for="OriginalInvoiceId" class="form-select" id="OriginalInvoiceId" asp-items="Model.Invoices">
+                            <option value="">-- Select Invoice --</option>
+                        </select>
+                        <span asp-validation-for="OriginalInvoiceId" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="WarehouseId" class="form-label">Return Warehouse *</label>
+                        <select asp-for="WarehouseId" class="form-select" asp-items="Model.Warehouses">
+                            <option value="">-- Select Warehouse --</option>
+                        </select>
+                        <span asp-validation-for="WarehouseId" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="ReturnDate" class="form-label">Return Date *</label>
+                        <input asp-for="ReturnDate" class="form-control" type="date" />
+                        <span asp-validation-for="ReturnDate" class="text-danger small"></span>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="ReturnReason" class="form-label">Return Reason</label>
+                        <textarea asp-for="ReturnReason" class="form-control" rows="2"></textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label asp-for="Remarks" class="form-label">Remarks</label>
+                        <textarea asp-for="Remarks" class="form-control" rows="2"></textarea>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Summary</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info" id="invoiceInfo">
+                        Select an Invoice to see items.
+                    </div>
+                    <div class="mt-3">
+                        <strong>Total Return Value:</strong>
+                        <span id="totalReturnDisplay" class="float-end fs-5 fw-bold">$0.00</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mt-3">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Items to Return</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive table-scrollable">
+                <table class="table table-bordered mb-0" id="itemsTable">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th>Sold Qty</th>
+                            <th>Previously Returned</th>
+                            <th>Available</th>
+                            <th>To Return</th>
+                            <th>Unit Price</th>
+                            <th>Total</th>
+                            <th>Reason</th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody">
+                        <tr>
+                            <td colspan="8" class="text-center py-4 text-muted">
+                                Select an Invoice to load items.
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3 d-flex justify-content-between">
+        <a asp-action="Index" class="btn btn-secondary">
+            <i class="align-middle" data-feather="arrow-left"></i> Back to Returns
+        </a>
+        <button type="submit" class="btn btn-warning">
+            <i class="align-middle" data-feather="rotate-ccw"></i> Process Return
+        </button>
+    </div>
+</form>
+
+@section Scripts {
+    @{
+        await Html.RenderPartialAsync("_ValidationScriptsPartial");
+    }
+
+    <script>
+        $('#OriginalInvoiceId').on('change', function() {
+            var invoiceId = $(this).val();
+            if (invoiceId) {
+                $.ajax({
+                    url: '@Url.Action("GetInvoiceLines", "CustomerReturns")',
+                    type: 'GET',
+                    data: { invoiceId: invoiceId },
+                    success: function(response) {
+                        if (response.success) {
+                            loadInvoiceLines(response);
+                        } else {
+                            $('#itemsBody').html('<tr><td colspan="8" class="text-center py-4 text-danger">Failed to load items.</td></tr>');
+                        }
+                    }
+                });
+            } else {
+                $('#itemsBody').html('<tr><td colspan="8" class="text-center py-4 text-muted">Select an Invoice to load items.</td></tr>');
+                $('#invoiceInfo').html('Select an Invoice to see items.');
+                $('#totalReturnDisplay').text('$0.00');
+            }
+        });
+
+        function loadInvoiceLines(data) {
+            var html = '';
+            var index = 0;
+            $('#invoiceInfo').html(`<strong>Invoice #${data.invoiceNumber}</strong><br />Customer ID: ${data.customerId}`);
+
+            for (var i = 0; i < data.lines.length; i++) {
+                var line = data.lines[i];
+                if (line.availableToReturn <= 0) continue;
+
+                html += `
+                    <tr class="return-line" data-index="${index}">
+                        <input type="hidden" name="Lines[${index}].InvoiceLineId" value="${line.lineId}" />
+                        <input type="hidden" name="Lines[${index}].ArticleId" value="${line.articleId}" />
+                        <input type="hidden" name="Lines[${index}].UnitPrice" value="${line.unitPrice}" />
+                        <td><strong>${line.articleCode}</strong><br /><small>${line.articleName}</small></td>
+                        <td class="text-end">${line.soldQuantity}</td>
+                        <td class="text-end">${line.previouslyReturned}</td>
+                        <td class="text-end text-primary">${line.availableToReturn}</td>
+                        <td>
+                            <input type="number" name="Lines[${index}].QuantityToReturn" class="form-control return-qty" style="width: 100px;"
+                                   value="0" min="0" max="${line.availableToReturn}" onchange="updateReturnTotal(${index})" />
+                        </td>
+                        <td class="text-end">$${(line.unitPrice || 0).toFixed(2)}</td>
+                        <td class="return-total-${index} text-end fw-bold">$0.00</td>
+                        <td>
+                            <input type="text" name="Lines[${index}].Reason" class="form-control" placeholder="Return reason" />
+                        </td>
+                        ${line.isBatchTracked ? `<input type="hidden" name="Lines[${index}].BatchNumber" value="${line.batchNumber}" />` : ''}
+                        ${line.isSerialized ? `<input type="hidden" name="Lines[${index}].SerialNumber" value="${line.serialNumber}" />` : ''}
+                    </tr>
+                `;
+                index++;
+            }
+
+            if (index === 0) {
+                html = '<tr><td colspan="8" class="text-center py-4 text-muted">No items available to return from this invoice.</td></tr>';
+            }
+
+            $('#itemsBody').html(html);
+            $('#totalReturnDisplay').text('$0.00');
+        }
+
+        function updateReturnTotal(index) {
+            var qty = parseFloat($(`input[name="Lines[${index}].QuantityToReturn"]`).val()) || 0;
+            var unitPrice = parseFloat($(`input[name="Lines[${index}].UnitPrice"]`).val()) || 0;
+            var total = qty * unitPrice;
+            $(`.return-total-${index}`).text('$' + total.toFixed(2));
+
+            var grandTotal = 0;
+            $("[class^='return-total-']").each(function() {
+                var val = parseFloat($(this).text().replace('$', '')) || 0;
+                grandTotal += val;
+            });
+            $('#totalReturnDisplay').text('$' + grandTotal.toFixed(2));
+        }
+    </script>
+}

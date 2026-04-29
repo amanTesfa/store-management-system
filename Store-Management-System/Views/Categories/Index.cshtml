@@ -65,17 +65,55 @@
 @section Scripts {
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
     <script>
+        function showConfirm(message, onConfirm) {
+            $('#confirmModalMessage').text(message);
+            $('#confirmModal').modal('show');
+
+            $('#confirmModalOk').off('click').on('click', function () {
+                $('#confirmModal').modal('hide');
+                if (onConfirm) onConfirm();
+            });
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+
+            var toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 1100;">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="align-middle me-2" data-feather="${icon}"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+
+            setTimeout(() => {
+                $('.toast').last().remove();
+            }, 3000);
+        }
+
         // Load category details into right panel
         function loadCategoryDetails(id) {
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("DetailsPartial", "Categories")',
                 type: 'GET',
                 data: { id: id },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     $('#formPanel').html(response);
                     feather.replace();
                 },
                 error: function() {
+                    $('#loadingSpinner').fadeOut(200);
                     showToast('error', 'Error loading category details.');
                 }
             });
@@ -83,14 +121,17 @@
 
         // Load create form
         function loadCreateForm() {
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("CreatePartial", "Categories")',
                 type: 'GET',
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     $('#formPanel').html(response);
                     feather.replace();
                 },
                 error: function() {
+                    $('#loadingSpinner').fadeOut(200);
                     showToast('error', 'Error loading create form.');
                 }
             });
@@ -98,25 +139,29 @@
 
         // Load edit form
         function loadEditForm(id) {
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("EditPartial", "Categories")',
                 type: 'GET',
                 data: { id: id },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     $('#formPanel').html(response);
                     feather.replace();
                 },
                 error: function() {
+                    $('#loadingSpinner').fadeOut(200);
                     showToast('error', 'Error loading edit form.');
                 }
             });
         }
 
-            // Submit create form
+        // Submit create form
         function submitCreateForm() {
             var formData = $('#createCategoryForm').serialize();
             var token = $('input[name="__RequestVerificationToken"]').val();
 
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("Create", "Categories")',
                 type: 'POST',
@@ -125,6 +170,7 @@
                     'RequestVerificationToken': token
                 },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     if (response.success) {
                         showToast('success', response.message);
                         refreshCategoryTree();
@@ -134,6 +180,7 @@
                     }
                 },
                 error: function(xhr) {
+                    $('#loadingSpinner').fadeOut(200);
                     console.error('Error:', xhr);
                     showToast('error', 'An error occurred. Please try again.');
                 }
@@ -145,6 +192,7 @@
             var formData = $('#editCategoryForm').serialize();
             var token = $('input[name="__RequestVerificationToken"]').val();
 
+            $('#loadingSpinner').fadeIn(200);
             $.ajax({
                 url: '@Url.Action("Edit", "Categories")',
                 type: 'POST',
@@ -153,6 +201,7 @@
                     'RequestVerificationToken': token
                 },
                 success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
                     if (response.success) {
                         showToast('success', response.message);
                         refreshCategoryTree();
@@ -162,14 +211,17 @@
                     }
                 },
                 error: function(xhr) {
+                    $('#loadingSpinner').fadeOut(200);
                     console.error('Error:', xhr);
                     showToast('error', 'An error occurred. Please try again.');
                 }
             });
         }
-        // Delete category
+
+        // Delete category - UPDATED with showConfirm
         function deleteCategory(id, name) {
-            if (confirm(`Are you sure you want to delete category "${name}"? This action cannot be undone.`)) {
+            showConfirm(`Are you sure you want to delete category "${name}"? This action cannot be undone.`, function() {
+                $('#loadingSpinner').fadeIn(200);
                 var token = $('input[name="__RequestVerificationToken"]').val();
 
                 $.ajax({
@@ -180,6 +232,7 @@
                         __RequestVerificationToken: token
                     },
                     success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
                         if (response.success) {
                             showToast('success', response.message);
                             refreshCategoryTree();
@@ -189,10 +242,11 @@
                         }
                     },
                     error: function() {
+                        $('#loadingSpinner').fadeOut(200);
                         showToast('error', 'Error deleting category.');
                     }
                 });
-            }
+            });
         }
 
         // Refresh category tree
@@ -276,32 +330,6 @@
                 refreshCategoryTree();
             }
         });
-
-        // Toast notification
-        function showToast(type, message) {
-            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
-            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
-
-            var toastHtml = `
-                <div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 1100;">
-                    <div class="d-flex">
-                        <div class="toast-body">
-                            <i class="align-middle me-2" data-feather="${icon}"></i>
-                            ${message}
-                        </div>
-                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
-                    </div>
-                </div>
-            `;
-
-            $('body').append(toastHtml);
-            var toast = new bootstrap.Toast($('.toast').last());
-            toast.show();
-
-            setTimeout(() => {
-                $('.toast').last().remove();
-            }, 3000);
-        }
 
         $(document).ready(function() {
             initDragAndDrop();

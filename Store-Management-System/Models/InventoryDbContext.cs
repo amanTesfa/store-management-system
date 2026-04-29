@@ -116,13 +116,122 @@ public partial class InventoryDbContext : DbContext
     public virtual DbSet<WithholdingTaxRule> WithholdingTaxRules { get; set; }
 
     public virtual DbSet<WithholdingTransaction> WithholdingTransactions { get; set; }
-
+    public virtual DbSet<ActivityLog> ActivityLogs { get; set; }
+    public virtual DbSet<StockAdjustment> StockAdjustments { get; set; }
+    public virtual DbSet<StockAdjustmentLine> StockAdjustmentLines { get; set; }
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 #warning To protect potentially sensitive information in your connection string, you should move it out of source code. You can avoid scaffolding the connection string by using the Name= syntax to read it from configuration - see https://go.microsoft.com/fwlink/?linkid=2131148. For more guidance on storing connection strings, see https://go.microsoft.com/fwlink/?LinkId=723263.
        => optionsBuilder.UseSqlServer("Server=THANOS-PC\\SQLEXPRESS;Database=InventoryDB;Trusted_Connection=True;TrustServerCertificate=True;MultipleActiveResultSets=true");
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<StockAdjustment>(entity =>
+        {
+            entity.ToTable("StockAdjustments");
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.AdjustmentNumber).IsUnique();
+            entity.Property(e => e.AdjustmentNumber).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.Status).IsRequired().HasMaxLength(20).HasDefaultValue("Draft");
+            entity.Property(e => e.AdjustmentType).IsRequired().HasMaxLength(20);
+            entity.Property(e => e.ReasonCategory).IsRequired().HasMaxLength(50);
+            entity.Property(e => e.TotalValue).HasColumnType("decimal(18,6)");
+
+            // Explicit foreign key configuration
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.CreatedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.CreatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.SubmittedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.SubmittedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ApprovedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.PostedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.PostedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.UpdatedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.UpdatedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<StockAdjustmentLine>(entity =>
+        {
+            entity.ToTable("StockAdjustmentLines");
+            entity.HasKey(e => e.Id);
+            entity.Property(e => e.SystemQuantity).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.PhysicalQuantity).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.Variance).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.UnitCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.TotalValue).HasColumnType("decimal(18,6)");
+
+            entity.HasOne(e => e.StockAdjustment)
+                .WithMany(e => e.StockAdjustmentLines)
+                .HasForeignKey(e => e.AdjustmentId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            entity.HasOne(e => e.Article)
+                .WithMany()
+                .HasForeignKey(e => e.ArticleId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+        modelBuilder.Entity<ActivityLog>(entity =>
+        {
+            entity.ToTable("ActivityLogs");
+
+            entity.HasKey(e => e.Id);
+
+            entity.Property(e => e.UserId)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.UserName)
+                .IsRequired()
+                .HasMaxLength(256);
+
+            entity.Property(e => e.Action)
+                .IsRequired()
+                .HasMaxLength(50);
+
+            entity.Property(e => e.EntityType)
+                .IsRequired()
+                .HasMaxLength(100);
+
+            entity.Property(e => e.Details)
+                .HasMaxLength(500);
+
+            entity.Property(e => e.IpAddress)
+                .HasMaxLength(50);
+
+            entity.Property(e => e.CreatedAt)
+                .HasDefaultValueSql("GETUTCDATE()");
+
+            // Indexes
+            entity.HasIndex(e => e.UserId)
+                .HasDatabaseName("IX_ActivityLogs_UserId");
+
+            entity.HasIndex(e => e.EntityType)
+                .HasDatabaseName("IX_ActivityLogs_EntityType");
+
+            entity.HasIndex(e => e.Action)
+                .HasDatabaseName("IX_ActivityLogs_Action");
+
+            entity.HasIndex(e => e.CreatedAt)
+                .HasDatabaseName("IX_ActivityLogs_CreatedAt");
+        });
         modelBuilder.Entity<AccountLedger>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK__AccountL__3214EC0752954F71");
@@ -580,6 +689,7 @@ public partial class InventoryDbContext : DbContext
             entity.Property(e => e.PostalCode).HasMaxLength(20);
             entity.Property(e => e.State).HasMaxLength(100);
             entity.Property(e => e.TaxNumber).HasMaxLength(50);
+           
         });
 
         modelBuilder.Entity<CurrentStock>(entity =>
@@ -1071,11 +1181,47 @@ public partial class InventoryDbContext : DbContext
 
         modelBuilder.Entity<Voucher>(entity =>
         {
+            entity.Property(e => e.WarehouseId);
+            entity.Property(e => e.ExpectedDate);
+            entity.Property(e => e.SentToSupplierAt);
+            entity.Property(e => e.PartiallyReceivedAt);
+            entity.Property(e => e.FullyReceivedAt);
+            entity.Property(e => e.ShippingCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.HandlingCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.InsuranceCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.OtherCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.TotalLandedCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.LandedCostDistributionMethod).HasMaxLength(20);
+            entity.Property(e => e.IsReturn).HasDefaultValue(false);
+            entity.Property(e => e.ReturnReason).HasMaxLength(500);
+            entity.Property(e => e.ApprovalComments).HasMaxLength(500);
+            entity.Property(e => e.ApprovedAt);
+            entity.Property(e => e.ApprovedBy);
+            entity.Property(e => e.PaymentReference).HasMaxLength(100);
+            // Add relationships
+            //         entity.HasOne(e => e.Consignor)
+            //.WithMany(c => c.Vouchers)
+            //.HasForeignKey(e => e.ConsignorId)
+            //.OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(e => e.Warehouse)
+                .WithMany()
+                .HasForeignKey(e => e.WarehouseId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.ApprovedByNavigation)
+                .WithMany()
+                .HasForeignKey(e => e.ApprovedBy)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(e => e.OriginalVoucher)
+                .WithMany(e => e.ReturnVouchers)
+                .HasForeignKey(e => e.OriginalVoucherId)
+                .OnDelete(DeleteBehavior.Restrict);
             entity.HasKey(e => e.Id).HasName("PK__Vouchers__3214EC07BC4E32A3");
 
             entity.HasIndex(e => e.ConsigneeId, "IX_Vouchers_ConsigneeId");
 
-            entity.HasIndex(e => e.ConsignorId, "IX_Vouchers_ConsignorId");
+           // entity.HasIndex(e => e.ConsignorId, "IX_Vouchers_ConsignorId");
 
             entity.HasIndex(e => e.Status, "IX_Vouchers_Status");
 
@@ -1106,14 +1252,17 @@ public partial class InventoryDbContext : DbContext
                 .HasForeignKey(d => d.ActivityId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_Vouchers_Activity");
-
+            entity.HasOne(e => e.Supplier)
+     .WithMany(s => s.Vouchers)
+     .HasForeignKey(e => e.SupplierId)
+     .OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(d => d.Consignee).WithMany(p => p.Vouchers)
                 .HasForeignKey(d => d.ConsigneeId)
                 .HasConstraintName("FK_Vouchers_Consignee");
 
-            entity.HasOne(d => d.Consignor).WithMany(p => p.Vouchers)
-                .HasForeignKey(d => d.ConsignorId)
-                .HasConstraintName("FK_Vouchers_Consignor");
+            //entity.HasOne(d => d.Consignor).WithMany(p => p.Vouchers)
+            //    .HasForeignKey(d => d.ConsignorId)
+            //    .HasConstraintName("FK_Vouchers_Consignor");
         });
 
         modelBuilder.Entity<VoucherCharge>(entity =>
@@ -1140,6 +1289,11 @@ public partial class InventoryDbContext : DbContext
 
         modelBuilder.Entity<VoucherLine>(entity =>
         {
+            entity.Property(e => e.LandedCostPercentage).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.LandedCostAmount).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.FinalUnitCost).HasColumnType("decimal(18,6)");
+            entity.Property(e => e.Reason).HasMaxLength(500);
+            entity.Property(e => e.ReceivedQuantity).HasColumnType("decimal(18,6)");
             entity.HasKey(e => e.Id).HasName("PK__VoucherL__3214EC0713852835");
 
             entity.HasIndex(e => e.ArticleId, "IX_VoucherLines_ArticleId");
@@ -1165,7 +1319,8 @@ public partial class InventoryDbContext : DbContext
             entity.Property(e => e.UnitPrice).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.WithholdingAmount).HasColumnType("decimal(18, 6)");
             entity.Property(e => e.WithholdingTaxCode).HasMaxLength(20);
-
+            entity.Property(e => e.RejectionReason).HasMaxLength(500);
+            entity.Property(e => e.IsAccepted).HasDefaultValue(true);
             entity.HasOne(d => d.Article).WithMany(p => p.VoucherLines)
                 .HasForeignKey(d => d.ArticleId)
                 .OnDelete(DeleteBehavior.ClientSetNull)

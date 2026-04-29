@@ -2,7 +2,10 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
+using Store_Management_System.DTOs;
+using Store_Management_System.Extensions;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 using System.Text.Json;
 using System.Text.RegularExpressions;
@@ -13,10 +16,11 @@ namespace Store_Management_System.Controllers
     public class BeginningBalanceController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public BeginningBalanceController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public BeginningBalanceController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: BeginningBalance
@@ -199,8 +203,10 @@ namespace Store_Management_System.Controllers
                     };
                     _context.BeginningBalanceLines.Add(balanceLine);
                 }
-
+                var balanceDto = balance.ToDto();
                 await _context.SaveChangesAsync();
+                await _activityLogService.LogAsync("Create", "BeginningBalance", balance.Id, null,
+    JsonSerializer.Serialize(balanceDto), $"Created beginning balance: {balanceDto.BalanceNumber}");
 
                 TempData["SuccessMessage"] = $"Beginning balance {balance.BalanceNumber} created successfully!";
                 return RedirectToAction(nameof(Index));
@@ -407,9 +413,11 @@ namespace Store_Management_System.Controllers
                     };
                     _context.BeginningBalanceLines.Add(balanceLine);
                 }
-
+                var balanceDto = balance.ToDto();
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Edit", "BeginningBalance", balance.Id,
+                JsonSerializer.Serialize(balanceDto), JsonSerializer.Serialize(balanceDto),
+                $"Updated beginning balance: {balanceDto.BalanceNumber}");
                 TempData["SuccessMessage"] = $"Beginning balance {balance.BalanceNumber} updated successfully!";
                 return RedirectToAction(nameof(Index));
             }
@@ -441,8 +449,11 @@ namespace Store_Management_System.Controllers
             balance.ApprovedBy = GetCurrentUserId();
             balance.ApprovalComments = comments;
             balance.UpdatedAt = DateTime.UtcNow;
-
+            var balanceDto = balance.ToDto();
             await _context.SaveChangesAsync();
+            await _activityLogService.LogAsync("Approve", "BeginningBalance", balance.Id,
+                JsonSerializer.Serialize(balanceDto), JsonSerializer.Serialize(balanceDto),
+                $"Approved beginning balance: {balance.BalanceNumber}");
 
             return Json(new { success = true, message = $"Balance {balance.BalanceNumber} approved successfully!" });
         }
@@ -456,13 +467,15 @@ namespace Store_Management_System.Controllers
                 .Include(b => b.BeginningBalanceLines)
                 .ThenInclude(l => l.Article)
                 .FirstOrDefaultAsync(b => b.Id == id);
-            if (balance.Status == "Posted")
-            {
-                return Json(new { success = false, message = "This balance has already been posted." });
-            }
+
             if (balance == null)
             {
                 return Json(new { success = false, message = "Balance not found." });
+            }
+
+            if (balance.Status == "Posted")
+            {
+                return Json(new { success = false, message = "This balance has already been posted." });
             }
 
             if (balance.Status != "Approved")
@@ -474,8 +487,13 @@ namespace Store_Management_System.Controllers
 
             try
             {
+                // Use a counter to generate unique movement numbers
+                int lineCounter = 0;
+
                 foreach (var line in balance.BeginningBalanceLines)
                 {
+                    lineCounter++;
+
                     // CHECK FOR EXISTING CURRENT STOCK FIRST
                     var existingStock = await _context.CurrentStocks
                         .FirstOrDefaultAsync(cs => cs.ArticleId == line.ArticleId &&
@@ -485,14 +503,12 @@ namespace Store_Management_System.Controllers
 
                     if (existingStock != null)
                     {
-                        // UPDATE existing record
                         existingStock.Quantity += line.Quantity;
                         existingStock.LastUpdated = DateTime.UtcNow;
                         _context.CurrentStocks.Update(existingStock);
                     }
                     else
                     {
-                        // INSERT new record
                         var currentStock = new CurrentStock
                         {
                             ArticleId = line.ArticleId,
@@ -506,26 +522,22 @@ namespace Store_Management_System.Controllers
                         };
                         _context.CurrentStocks.Add(currentStock);
                     }
-                    //var voucher = new Voucher
-                    //{
-                    //    VoucherNumber = $"BB-{balance.BalanceNumber}",
-                    //    VoucherType = "BeginningBalance",
-                    //    VoucherDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                    //    PostingDate = DateOnly.FromDateTime(DateTime.UtcNow),
-                    //    Status = "Posted",
-                    //    CreatedAt = DateTime.UtcNow,
-                    //    CreatedBy = GetCurrentUserId()
-                    //};
-                    //_context.Vouchers.Add(voucher);
-                    //await _context.SaveChangesAsync();
 
-                    // Create stock movement record
+                    string cleanNumber = balance.BalanceNumber;
+                    if (cleanNumber.StartsWith("BB-"))
+                    {
+                        cleanNumber = cleanNumber.Substring(3); // Remove "BB-"
+                    }
+
+                    // Build unique number: BB-XXXXXX-L####-######
+                    var movementNumber = $"BB-{cleanNumber}-L{lineCounter:D4}-{DateTime.UtcNow.Ticks % 1000000:D6}";
+
                     var stockMovement = new StockMovement
                     {
-                        MovementNumber = $"BB-{balance.BalanceNumber}",
+                        MovementNumber = movementNumber,
                         ArticleId = line.ArticleId,
                         WarehouseId = line.WarehouseId ?? balance.WarehouseId ?? 1,
-                        MovementType = "Beginning",
+                        MovementType = "In",
                         ActivityType = "Beginning Balance",
                         Quantity = line.Quantity,
                         PreviousStock = existingStock?.Quantity ?? 0,
@@ -539,7 +551,7 @@ namespace Store_Management_System.Controllers
                         CreatedBy = GetCurrentUserId(),
                         ReferenceNumber = balance.BalanceNumber,
                         VoucherId = null,
-                        VoucherLineId=null
+                        VoucherLineId = null
                     };
                     _context.StockMovements.Add(stockMovement);
                 }
@@ -553,6 +565,12 @@ namespace Store_Management_System.Controllers
                 await _context.SaveChangesAsync();
                 await transaction.CommitAsync();
 
+                var balanceDto = balance.ToDto();
+                await _activityLogService.LogAsync("Post", "BeginningBalance", balance.Id,
+                    JsonSerializer.Serialize(balanceDto),
+                    JsonSerializer.Serialize(balanceDto),
+                    $"Posted beginning balance: {balance.BalanceNumber}");
+
                 return Json(new { success = true, message = $"Balance {balance.BalanceNumber} posted to inventory successfully!" });
             }
             catch (Exception ex)
@@ -561,7 +579,6 @@ namespace Store_Management_System.Controllers
                 return Json(new { success = false, message = $"Error posting balance: {ex.Message}" });
             }
         }
-
         // POST: BeginningBalance/Delete/5
         [HttpPost]
         [ValidateAntiForgeryToken]
@@ -583,9 +600,11 @@ namespace Store_Management_System.Controllers
 
             _context.BeginningBalanceLines.RemoveRange(balance.BeginningBalanceLines);
             _context.BeginningBalances.Remove(balance);
+            var balanceDto = balance.ToDto();
             await _context.SaveChangesAsync();
-
-            return Json(new { success = true, message = $"Balance {balance.BalanceNumber} deleted successfully!" });
+            await _activityLogService.LogAsync("Delete", "BeginningBalance", id, null, null,
+            $"Deleted beginning balance: {balanceDto.BalanceNumber}");
+            return Json(new { success = true, message = $"Balance {balanceDto.BalanceNumber} deleted successfully!" });
         }
 
         // GET: BeginningBalance/GetProductDetails
@@ -611,7 +630,475 @@ namespace Store_Management_System.Controllers
                 isExpiryTracked = article.IsExpiryTracked
             });
         }
+        // GET: BeginningBalance/Import
+        [HttpGet]
+        public async Task<IActionResult> Import()
+        {
+            await PopulateImportDropdowns();
+            return View();
+        }
 
+        // POST: BeginningBalance/Import
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Import(IFormFile file, int fiscalPeriodId, string? description = null)
+        {
+            if (file == null || file.Length == 0)
+            {
+                TempData["ErrorMessage"] = "Please select a file to upload.";
+                await PopulateImportDropdowns();
+                return View();
+            }
+
+            if (fiscalPeriodId <= 0)
+            {
+                TempData["ErrorMessage"] = "Please select a fiscal period.";
+                await PopulateImportDropdowns();
+                return View();
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            if (extension != ".csv" && extension != ".xlsx" && extension != ".xls")
+            {
+                TempData["ErrorMessage"] = "Please upload a CSV or Excel (.xlsx/.xls) file.";
+                await PopulateImportDropdowns();
+                return View();
+            }
+
+            try
+            {
+                List<BeginningBalanceImportDto> records;
+
+                if (extension == ".csv")
+                {
+                    records = await ParseCsvFile(file);
+                }
+                else
+                {
+                    records = await ParseExcelFile(file);
+                }
+
+                if (records.Count == 0)
+                {
+                    TempData["ErrorMessage"] = "No valid records found in the file. Please check the format.";
+                    await PopulateImportDropdowns();
+                    return View();
+                }
+
+                // Validate and import
+                var result = await ImportRecords(records, fiscalPeriodId, description);
+
+                if (result.SuccessCount > 0)
+                {
+                    TempData["SuccessMessage"] = $"Successfully imported {result.SuccessCount} lines to Balance {result.BalanceNumber}!";
+                }
+
+                if (result.FailureCount > 0)
+                {
+                    TempData["ErrorMessage"] = $"{result.FailureCount} records failed to import. Check the error details.";
+                }
+
+                return View("ImportResult", result);
+            }
+            catch (Exception ex)
+            {
+                TempData["ErrorMessage"] = $"Error processing file: {ex.Message}";
+                await PopulateImportDropdowns();
+                return View();
+            }
+        }
+
+        // POST: BeginningBalance/PreviewImport
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> PreviewImport(IFormFile file)
+        {
+            if (file == null || file.Length == 0)
+            {
+                return Json(new { success = false, message = "Please select a file to upload." });
+            }
+
+            var extension = Path.GetExtension(file.FileName).ToLower();
+            if (extension != ".csv" && extension != ".xlsx" && extension != ".xls")
+            {
+                return Json(new { success = false, message = "Please upload a CSV or Excel file." });
+            }
+
+            try
+            {
+                List<BeginningBalanceImportDto> records;
+
+                if (extension == ".csv")
+                {
+                    records = await ParseCsvFile(file);
+                }
+                else
+                {
+                    records = await ParseExcelFile(file);
+                }
+
+                // Preview first 10 rows
+                var preview = records.Take(10).Select((r, i) => new
+                {
+                    Row = i + 1,
+                    r.ArticleCode,
+                    r.ArticleName,
+                    r.WarehouseCode,
+                    r.Quantity,
+                    r.UnitCost,
+                    TotalValue = r.Quantity * r.UnitCost,
+                    r.BatchNumber,
+                    r.ExpiryDate,
+                    IsValid = (!string.IsNullOrWhiteSpace(r.ArticleCode) || !string.IsNullOrWhiteSpace(r.ArticleName))
+                              && r.Quantity > 0
+                              && !string.IsNullOrWhiteSpace(r.WarehouseCode)
+                }).ToList();
+
+                return Json(new
+                {
+                    success = true,
+                    totalRows = records.Count,
+                    preview = preview,
+                    previewCount = preview.Count
+                });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = $"Error reading file: {ex.Message}" });
+            }
+        }
+
+        // GET: BeginningBalance/DownloadSample
+        [HttpGet]
+        public IActionResult DownloadSample()
+        {
+            var csvContent = "Article Code,Article Name,Warehouse Code,Quantity,Unit Cost,Batch Number,Serial Number,Expiry Date,Notes\n";
+            csvContent += "ART-2704-0001,,WH-001,100,15.50,BATCH-001,,2026-12-31,\n";
+            csvContent += ",Wireless Mouse,WH-001,50,12.00,BATCH-002,SN-001,,Initial stock\n";
+            csvContent += "ART-2704-0002,,WH-002,200,8.75,,,2026-06-30,Supplier: ABC Corp\n";
+
+            var bytes = System.Text.Encoding.UTF8.GetBytes(csvContent);
+            return File(bytes, "text/csv", "beginning_balance_import_template.csv");
+        }
+
+        // ==========================================
+        // IMPORT HELPER METHODS
+        // ==========================================
+
+        private async Task<List<BeginningBalanceImportDto>> ParseCsvFile(IFormFile file)
+        {
+            var records = new List<BeginningBalanceImportDto>();
+
+            using var stream = new MemoryStream();
+            await file.CopyToAsync(stream);
+            stream.Position = 0;
+
+            using var reader = new StreamReader(stream);
+            var headerLine = await reader.ReadLineAsync();
+
+            if (string.IsNullOrWhiteSpace(headerLine))
+                return records;
+
+            var headers = headerLine.Split(',').Select(h => h.Trim().Trim('"').ToLower()).ToArray();
+
+            // Map column indices
+            var codeIndex = Array.FindIndex(headers, h => h.Contains("code") && !h.Contains("warehouse"));
+            var nameIndex = Array.FindIndex(headers, h => h.Contains("name") && !h.Contains("warehouse"));
+            var whIndex = Array.FindIndex(headers, h => h.Contains("warehouse"));
+            var qtyIndex = Array.FindIndex(headers, h => h.Contains("qty") || h.Contains("quantity") || h.Contains("qunantity"));
+            var costIndex = Array.FindIndex(headers, h => h.Contains("cost") || h.Contains("price"));
+            var batchIndex = Array.FindIndex(headers, h => h.Contains("batch") || h.Contains("lot"));
+            var serialIndex = Array.FindIndex(headers, h => h.Contains("serial") || h.Contains("sn"));
+            var expiryIndex = Array.FindIndex(headers, h => h.Contains("expir") || h.Contains("exp") || h.Contains("date"));
+            var notesIndex = Array.FindIndex(headers, h => h.Contains("note") || h.Contains("remark") || h.Contains("comment"));
+
+            // If no quantity column found, try alternate names
+            if (qtyIndex < 0)
+            {
+                qtyIndex = Array.FindIndex(headers, h => h == "qty" || h == "quantity");
+            }
+
+            while (!reader.EndOfStream)
+            {
+                var line = await reader.ReadLineAsync();
+                if (string.IsNullOrWhiteSpace(line)) continue;
+
+                var values = ParseCsvLine(line);
+
+                // Skip empty rows
+                if (values.All(v => string.IsNullOrWhiteSpace(v))) continue;
+
+                var record = new BeginningBalanceImportDto
+                {
+                    ArticleCode = codeIndex >= 0 && codeIndex < values.Count ? values[codeIndex].Trim() : "",
+                    ArticleName = nameIndex >= 0 && nameIndex < values.Count ? values[nameIndex].Trim() : "",
+                    WarehouseCode = whIndex >= 0 && whIndex < values.Count ? values[whIndex].Trim() : "",
+                    Quantity = qtyIndex >= 0 && qtyIndex < values.Count ? ParseDecimal(values[qtyIndex]) : 0,
+                    UnitCost = costIndex >= 0 && costIndex < values.Count ? ParseDecimal(values[costIndex]) : 0,
+                    BatchNumber = batchIndex >= 0 && batchIndex < values.Count ? values[batchIndex].Trim() : null,
+                    SerialNumber = serialIndex >= 0 && serialIndex < values.Count ? values[serialIndex].Trim() : null,
+                    ExpiryDate = expiryIndex >= 0 && expiryIndex < values.Count ? values[expiryIndex].Trim() : null,
+                    Notes = notesIndex >= 0 && notesIndex < values.Count ? values[notesIndex].Trim() : null
+                };
+
+                // Only add if there's some meaningful data
+                if (!string.IsNullOrWhiteSpace(record.ArticleCode) || !string.IsNullOrWhiteSpace(record.ArticleName))
+                {
+                    records.Add(record);
+                }
+            }
+
+            return records;
+        }
+
+        private async Task<List<BeginningBalanceImportDto>> ParseExcelFile(IFormFile file)
+        {
+            // For now, treat Excel as CSV
+            // For proper Excel support: install EPPlus NuGet package
+            try
+            {
+                return await ParseCsvFile(file);
+            }
+            catch
+            {
+                throw new Exception("Excel parsing requires the EPPlus package. Please save your file as CSV or install EPPlus.");
+            }
+        }
+
+        private List<string> ParseCsvLine(string line)
+        {
+            var values = new List<string>();
+            var currentValue = "";
+            var inQuotes = false;
+
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+
+                if (c == '"')
+                {
+                    inQuotes = !inQuotes;
+                }
+                else if (c == ',' && !inQuotes)
+                {
+                    values.Add(currentValue.Trim('"').Trim());
+                    currentValue = "";
+                }
+                else
+                {
+                    currentValue += c;
+                }
+            }
+            values.Add(currentValue.Trim('"').Trim());
+
+            return values;
+        }
+
+        private decimal ParseDecimal(string value)
+        {
+            value = value.Replace("$", "").Replace(",", "").Replace(" ", "").Trim();
+            return decimal.TryParse(value, out var result) ? result : 0;
+        }
+
+        private async Task<BeginningBalanceImportResult> ImportRecords(
+            List<BeginningBalanceImportDto> records,
+            int fiscalPeriodId,
+            string? description)
+        {
+            var result = new BeginningBalanceImportResult
+            {
+                TotalRows = records.Count,
+                Errors = new List<string>()
+            };
+
+            // Pre-load lookup data
+            var articles = await _context.Articles
+                .Where(a => a.IsActive && a.IsStockable)
+                .Select(a => new { a.Id, a.ArticleCode, a.ArticleName, a.IsBatchTracked, a.IsSerialized, a.IsExpiryTracked })
+                .ToListAsync();
+
+            var warehouses = await _context.Warehouses
+                .Where(w => w.IsActive && !w.IsDeleted)
+                .Select(w => new { w.Id, w.WarehouseCode, w.WarehouseName })
+                .ToListAsync();
+
+            var fiscalPeriod = await _context.FiscalPeriods.FindAsync(fiscalPeriodId);
+            if (fiscalPeriod == null)
+            {
+                result.Errors.Add("Invalid fiscal period selected.");
+                result.FailureCount = records.Count;
+                return result;
+            }
+
+            // Create the Beginning Balance header
+            var balance = new BeginningBalance
+            {
+                BalanceNumber = await GenerateBalanceNumber(),
+                FiscalPeriodId = fiscalPeriodId,
+                Description = description ?? $"Imported from file - {DateTime.Now:yyyy-MM-dd HH:mm}",
+                Status = "Draft",
+                BalanceDate = DateOnly.FromDateTime(DateTime.UtcNow),
+                CreatedAt = DateTime.UtcNow,
+                CreatedBy = GetCurrentUserId()
+            };
+
+            _context.BeginningBalances.Add(balance);
+            await _context.SaveChangesAsync();
+
+            result.BalanceId = balance.Id;
+            result.BalanceNumber = balance.BalanceNumber;
+
+            var rowNumber = 0;
+            var lineNumber = 0;
+
+            foreach (var record in records)
+            {
+                rowNumber++;
+                try
+                {
+                    // Validate
+                    if (string.IsNullOrWhiteSpace(record.ArticleCode) && string.IsNullOrWhiteSpace(record.ArticleName))
+                    {
+                        result.FailureCount++;
+                        result.Errors.Add($"Row {rowNumber}: Either Article Code or Article Name is required.");
+                        continue;
+                    }
+
+                    if (record.Quantity <= 0)
+                    {
+                        result.FailureCount++;
+                        result.Errors.Add($"Row {rowNumber}: Quantity must be greater than 0.");
+                        continue;
+                    }
+
+                    if (string.IsNullOrWhiteSpace(record.WarehouseCode))
+                    {
+                        result.FailureCount++;
+                        result.Errors.Add($"Row {rowNumber}: Warehouse Code is required.");
+                        continue;
+                    }
+
+                    // Find article by code or name
+                    var article = articles.FirstOrDefault(a =>
+                        (!string.IsNullOrWhiteSpace(record.ArticleCode) &&
+                         a.ArticleCode.Equals(record.ArticleCode, StringComparison.OrdinalIgnoreCase)) ||
+                        (!string.IsNullOrWhiteSpace(record.ArticleName) &&
+                         a.ArticleName.Equals(record.ArticleName, StringComparison.OrdinalIgnoreCase)));
+
+                    if (article == null)
+                    {
+                        result.FailureCount++;
+                        result.Errors.Add($"Row {rowNumber}: Article '{record.ArticleCode ?? record.ArticleName}' not found.");
+                        continue;
+                    }
+
+                    // Find warehouse by code or name
+                    var warehouse = warehouses.FirstOrDefault(w =>
+                        w.WarehouseCode.Equals(record.WarehouseCode, StringComparison.OrdinalIgnoreCase) ||
+                        w.WarehouseName.Equals(record.WarehouseCode, StringComparison.OrdinalIgnoreCase));
+
+                    if (warehouse == null)
+                    {
+                        result.FailureCount++;
+                        result.Errors.Add($"Row {rowNumber}: Warehouse '{record.WarehouseCode}' not found.");
+                        continue;
+                    }
+
+                    // Parse expiry date if provided
+                    DateOnly? expiryDate = null;
+                    if (!string.IsNullOrWhiteSpace(record.ExpiryDate))
+                    {
+                        if (DateOnly.TryParse(record.ExpiryDate, out var parsedDate))
+                        {
+                            expiryDate = parsedDate;
+                        }
+                        else if (DateTime.TryParse(record.ExpiryDate, out var parsedDateTime))
+                        {
+                            expiryDate = DateOnly.FromDateTime(parsedDateTime);
+                        }
+                    }
+
+                    // Create the balance line
+                    var balanceLine = new BeginningBalanceLine
+                    {
+                        BeginningBalanceId = balance.Id,
+                        ArticleId = article.Id,
+                        WarehouseId = warehouse.Id,
+                        Quantity = record.Quantity,
+                        UnitCost = record.UnitCost,
+                        BatchNumber = string.IsNullOrWhiteSpace(record.BatchNumber) ? null : record.BatchNumber.Trim(),
+                        SerialNumber = string.IsNullOrWhiteSpace(record.SerialNumber) ? null : record.SerialNumber.Trim(),
+                        ExpiryDate = expiryDate,
+                        Notes = string.IsNullOrWhiteSpace(record.Notes) ? null : record.Notes.Trim(),
+                        CreatedAt = DateTime.UtcNow,
+                        CreatedBy = GetCurrentUserId()
+                    };
+
+                    _context.BeginningBalanceLines.Add(balanceLine);
+                    await _context.SaveChangesAsync();
+                    result.SuccessCount++;
+                    lineNumber++;
+                }
+                catch (Exception ex)
+                {
+                    result.FailureCount++;
+                    result.Errors.Add($"Row {rowNumber}: {ex.Message}");
+                }
+            }
+
+            // If no success lines, delete the empty balance
+            if (result.SuccessCount == 0)
+            {
+                _context.BeginningBalances.Remove(balance);
+                await _context.SaveChangesAsync();
+                result.BalanceId = 0;
+                result.BalanceNumber = "";
+                result.Errors.Insert(0, "No valid records were imported. The balance was not created.");
+            }
+            else
+            {
+                // Update the balance with warehouse if all lines are for one warehouse
+                var distinctWarehouses = await _context.BeginningBalanceLines
+                    .Where(l => l.BeginningBalanceId == balance.Id)
+                    .Select(l => l.WarehouseId)
+                    .Distinct()
+                    .ToListAsync();
+
+                if (distinctWarehouses.Count == 1)
+                {
+                    balance.WarehouseId = distinctWarehouses[0];
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Log activity
+                await _activityLogService.LogAsync("Create", "BeginningBalance", balance.Id, null,
+                    JsonSerializer.Serialize(new { balance.BalanceNumber, LineCount = result.SuccessCount }),
+                    $"Imported beginning balance: {balance.BalanceNumber} with {result.SuccessCount} lines");
+            }
+
+            return result;
+        }
+
+        private async Task PopulateImportDropdowns()
+        {
+            // Fiscal Periods (only open periods)
+            var periods = await _context.FiscalPeriods
+                .Where(p => !p.IsClosed)
+                .OrderByDescending(p => p.StartDate)
+                .Select(p => new SelectListItem
+                {
+                    Value = p.Id.ToString(),
+                    Text = $"{p.PeriodName} ({p.StartDate:MMM dd, yyyy} - {p.EndDate:MMM dd, yyyy})"
+                })
+                .ToListAsync();
+
+            ViewBag.FiscalPeriods = new SelectList(periods, "Value", "Text");
+
+            // Pre-select the current active period
+            var activePeriod = await _context.FiscalPeriods.FirstOrDefaultAsync(p => !p.IsClosed);
+            ViewBag.DefaultFiscalPeriodId = activePeriod?.Id ?? 0;
+        }
         // Helper: Generate balance number
         private async Task<string> GenerateBalanceNumber()
         {

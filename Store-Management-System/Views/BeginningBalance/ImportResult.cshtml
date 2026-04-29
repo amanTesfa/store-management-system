@@ -1,0 +1,145 @@
+﻿@using Store_Management_System.DTOs
+@model BeginningBalanceImportResult
+@{
+    ViewData["Title"] = "Import Results";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">Import Results</h1>
+    <span class="badge bg-dark text-white ms-2">Summary</span>
+</div>
+
+@if (Model.SuccessCount > 0)
+{
+    <div class="alert alert-success">
+        <h5>✅ Balance Created: <code>@Model.BalanceNumber</code></h5>
+        <p class="mb-0">Status: <span class="badge bg-warning">Draft</span> — You can now Approve and Post this balance.</p>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h5 class="text-success mb-2">✅ Successful</h5>
+                <h2 class="mb-0">@Model.SuccessCount</h2>
+                <small class="text-muted">lines imported</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h5 class="text-danger mb-2">❌ Failed</h5>
+                <h2 class="mb-0">@Model.FailureCount</h2>
+                <small class="text-muted">lines failed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h5 class="text-info mb-2">📊 Total</h5>
+                <h2 class="mb-0">@Model.TotalRows</h2>
+                <small class="text-muted">lines processed</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Errors.Any())
+{
+    <div class="card mt-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">Error Details</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th>Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Errors.Count; i++)
+                        {
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td class="text-danger">@Model.Errors[i]</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="mt-4 d-flex gap-2">
+    @if (Model.SuccessCount > 0)
+    {
+        <a asp-action="Details" asp-route-id="@Model.BalanceId" class="btn btn-info">
+            <i class="align-middle" data-feather="eye"></i> View Balance
+        </a>
+        <button type="button" class="btn btn-success" onclick="approveAndGo(@Model.BalanceId)">
+            <i class="align-middle" data-feather="check-circle"></i> Approve Now
+        </button>
+    }
+    <a asp-action="Import" class="btn btn-primary">
+        <i class="align-middle" data-feather="upload"></i> Import More
+    </a>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="align-middle" data-feather="list"></i> View All Balances
+    </a>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        function approveAndGo(balanceId) {
+            if (confirm('Approve this balance? You can then post it to update inventory.')) {
+                $('#loadingSpinner').fadeIn(200);
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '@Url.Action("Approve", "BeginningBalance")',
+                    type: 'POST',
+                    data: { id: balanceId, __RequestVerificationToken: token },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            if (confirm(response.message + '\n\nDo you want to post it to inventory now?')) {
+                                $('#loadingSpinner').fadeIn(200);
+                                $.ajax({
+                                    url: '@Url.Action("Post", "BeginningBalance")',
+                                    type: 'POST',
+                                    data: { id: balanceId, __RequestVerificationToken: token },
+                                    success: function(postResponse) {
+                                        $('#loadingSpinner').fadeOut(200);
+                                        alert(postResponse.message);
+                                        window.location.href = '@Url.Action("Index", "BeginningBalance")';
+                                    },
+                                    error: function() {
+                                        $('#loadingSpinner').fadeOut(200);
+                                        alert('Error posting balance.');
+                                    }
+                                });
+                            } else {
+                                window.location.href = '@Url.Action("Index", "BeginningBalance")';
+                            }
+                        } else {
+                            alert(response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        alert('Error approving balance.');
+                    }
+                });
+            }
+        }
+    </script>
+}

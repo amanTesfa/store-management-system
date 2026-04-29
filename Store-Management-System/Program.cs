@@ -1,12 +1,18 @@
 ﻿using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllersWithViews();
-
+// ML Services
+builder.Services.AddScoped<MLDataService>();
+builder.Services.AddScoped<ModelTrainerService>();
+builder.Services.AddScoped<SampleDataGenerator>();
+builder.Services.AddSingleton<ForecastService>();
+builder.Services.AddScoped<Store_Management_System.Services.IChatbotService, Store_Management_System.Services.ChatbotService>();
 // 1. Register the scaffolded business DbContext (unchanged)
 builder.Services.AddDbContext<InventoryDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
@@ -66,6 +72,19 @@ builder.Services.AddAuthorization(options =>
     options.AddPolicy("AdminOnly", policy => policy.RequireRole("Admin"));
     options.AddPolicy("ManagerOnly", policy => policy.RequireRole("Admin", "Manager"));
 });
+// Add ML Services
+// ML Services
+// ML Services
+builder.Services.AddScoped<MLDataService>();
+builder.Services.AddScoped<ModelTrainerService>();
+builder.Services.AddScoped<SampleDataGenerator>();
+builder.Services.AddSingleton<ForecastService>();
+builder.Services.AddScoped<IntentModelTrainer>();  // ← ADD THIS LINE
+builder.Services.AddScoped<Store_Management_System.Services.IChatbotService, Store_Management_System.Services.ChatbotService>();
+// Add background service for weekly retraining
+builder.Services.AddHostedService<ModelRetrainingBackgroundService>();
+builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<ActivityLogService>();
 
 var app = builder.Build();
 
@@ -114,7 +133,23 @@ app.UseSession();
 app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Welcome}/{id?}");
+using (var scope = app.Services.CreateScope())
+{
+    var trainer = scope.ServiceProvider.GetRequiredService<IntentModelTrainer>();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
+    try
+    {
+        logger.LogInformation("Checking intent classification model...");
+        trainer.TrainIfNotExists();
+        logger.LogInformation("Intent model check complete.");
+    }
+    catch (Exception ex)
+    {
+        logger.LogError(ex, "Failed to train intent model on startup");
+        // Don't crash the app—the chatbot will fall back gracefully
+    }
+}
 // Seed initial data (roles and users) using Identity (ApplicationUser, ApplicationRole)
 using (var scope = app.Services.CreateScope())
 {
@@ -138,7 +173,7 @@ using (var scope = app.Services.CreateScope())
                     logger.LogError($"Failed to create role {roleName}: {string.Join(", ", result.Errors.Select(e => e.Description))}");
             }
         }
-
+     
         // Helper to create a user
         async Task CreateUserIfNotExists(string userName, string email, string password, string firstName, string lastName, string role)
         {

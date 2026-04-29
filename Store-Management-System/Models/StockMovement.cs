@@ -14,6 +14,7 @@ public partial class StockMovement
     public int? VoucherLineId { get; set; }
 
     public int ArticleId { get; set; }
+    public string? Notes { get; set; }
 
     public int WarehouseId { get; set; }
 

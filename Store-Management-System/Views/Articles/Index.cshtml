@@ -5,13 +5,18 @@
     ViewData["Title"] = "Articles";
 }
 
+
 <div class="mb-3 d-flex justify-content-between align-items-center">
     <h1 class="h3 d-inline align-middle">Articles</h1>
-    <a asp-action="Create" class="btn btn-primary">
-        <i class="align-middle" data-feather="plus"></i> Add New Article
-    </a>
+    <div class="d-flex gap-2">
+        <a asp-action="Import" class="btn btn-outline-primary">
+            <i class="align-middle" data-feather="upload"></i> Import Articles
+        </a>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="align-middle" data-feather="plus"></i> Add New Article
+        </a>
+    </div>
 </div>
-
 <div class="card">
     <div class="card-body">
         <form method="get" asp-action="Index" class="mb-4">
@@ -33,12 +38,13 @@
             </div>
         </form>
 
-        <div class="table-responsive">
+        <div class="table-responsive table-scrollable">
             <table class="table table-hover my-0">
                 <thead>
                     <tr>
                         <th>Article Code</th>
                         <th>Article Name</th>
+                        <th>Current Stock</th>
                         <th>Category</th>
                         <th>Price</th>
                         <th>Status</th>
@@ -63,6 +69,7 @@
                                 <td><code>@article.ArticleCode</code></td>
                                 <td><strong>@article.ArticleName</strong><br /><small class="text-muted">@(article.Description?.Length > 50 ? article.Description.Substring(0, 50) + "..." : article.Description)</small></td>
                                 <td>@article.CategoryName</td>
+                                <td class="text-end">@article.CurrentStock</td>
                                 <td>@article.StandardPrice.ToString("C")</td>
                                 <td><span class="badge @(article.IsActive ? "bg-success" : "bg-danger")">@(article.IsActive ? "Active" : "Inactive")</span></td>
                                 <td>
@@ -140,17 +147,21 @@
 @section Scripts {
 
     <script>
-        // Show delete confirmation modal
-        function showDeleteModal(id, articleName) {
-            $('#deleteArticleId').val(id);
-            $('#deleteModalMessage').text(`Are you sure you want to delete article "${articleName}"?`);
-            $('#deleteModal').modal('show');
+        function showConfirm(message, onConfirm) {
+            $('#confirmModalMessage').text(message);
+            $('#confirmModal').modal('show');
+
+            $('#confirmModalOk').off('click').on('click', function () {
+                $('#confirmModal').modal('hide');
+                if (onConfirm) onConfirm();
+            });
         }
 
-        // Handle delete confirmation
-        $(document).ready(function() {
-            $('#confirmDeleteBtn').on('click', function() {
-                var id = $('#deleteArticleId').val();
+        // Show delete confirmation modal using showConfirm
+        function showDeleteModal(id, articleName) {
+            showConfirm(`Are you sure you want to delete article "${articleName}"? This action cannot be undone.`, function() {
+                // Show loading spinner
+                $('#loadingSpinner').fadeIn(200);
 
                 $.ajax({
                     url: '@Url.Action("DeleteConfirmed", "Articles")',
@@ -160,17 +171,36 @@
                         __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val()
                     },
                     success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
                         if (response.success) {
-                            location.reload();
+                            showToast('success', response.message);
+                            setTimeout(function() { location.reload(); }, 1500);
                         } else {
-                            alert(response.message || 'Error deleting article');
+                            showToast('error', response.message);
                         }
                     },
                     error: function() {
-                        alert('An error occurred while deleting the article.');
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred while deleting the article.');
                     }
                 });
             });
+        }
+
+        // Toast notification function (if not already present)
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(function() { $('.toast').last().remove(); }, 3000);
+        }
+
+        $(document).ready(function() {
+            // Any other existing initialization code
+            feather.replace();
         });
     </script>
 

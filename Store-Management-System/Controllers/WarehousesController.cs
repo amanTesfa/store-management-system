@@ -2,6 +2,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Store_Management_System.Models;
+using Store_Management_System.Services;
 using Store_Management_System.ViewModels;
 using System.Text.RegularExpressions;
 
@@ -11,10 +12,11 @@ namespace Store_Management_System.Controllers
     public class WarehousesController : Controller
     {
         private readonly InventoryDbContext _context;
-
-        public WarehousesController(InventoryDbContext context)
+        private readonly ActivityLogService _activityLogService;
+        public WarehousesController(InventoryDbContext context, ActivityLogService activityLogService)
         {
             _context = context;
+            _activityLogService = activityLogService;
         }
 
         // GET: Warehouses
@@ -91,7 +93,7 @@ namespace Store_Management_System.Controllers
 
                 _context.Warehouses.Add(warehouse);
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Create", "Warehouse", warehouse.Id, newValue: $"Code: {warehouse.WarehouseCode}, Name: {warehouse.WarehouseName}");
                 return Json(new { success = true, message = $"Warehouse '{warehouse.WarehouseName}' created successfully!" });
             }
 
@@ -203,7 +205,7 @@ namespace Store_Management_System.Controllers
 
                 _context.Update(warehouse);
                 await _context.SaveChangesAsync();
-
+                await _activityLogService.LogAsync("Edit", "Warehouse", warehouse.Id, oldValue: $"Code: {warehouse.WarehouseCode}, Name: {warehouse.WarehouseName}", newValue: $"Code: {model.WarehouseCode}, Name: {model.WarehouseName}");
                 return Json(new { success = true, message = $"Warehouse '{warehouse.WarehouseName}' updated successfully!" });
             }
 
@@ -239,7 +241,7 @@ namespace Store_Management_System.Controllers
 
             _context.Update(warehouse);
             await _context.SaveChangesAsync();
-
+            await _activityLogService.LogAsync("Delete", "Warehouse", warehouse.Id, oldValue: $"Code: {warehouse.WarehouseCode}, Name: {warehouse.WarehouseName}");
             return Json(new { success = true, message = $"Warehouse '{warehouse.WarehouseName}' deleted successfully!" });
         }
 

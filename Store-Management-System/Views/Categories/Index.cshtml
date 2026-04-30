@@ -1,0 +1,339 @@
+﻿@model CategoryIndexViewModel
+
+@{
+    ViewData["Title"] = "Categories";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Categories</h1>
+        <span class="badge bg-dark text-white ms-2">Hierarchical</span>
+    </div>
+    <button type="button" class="btn btn-primary" onclick="loadCreateForm()">
+        <i class="align-middle" data-feather="plus"></i> Add Category
+    </button>
+</div>
+
+<!-- Split Screen Layout -->
+<div class="row g-4">
+    <!-- Left Side: Category Tree (Scrollable) -->
+    <div class="col-lg-5 col-xl-4">
+        <div class="card">
+            <div class="card-header">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search categories..." value="@Model.SearchTerm" />
+                    <button class="btn btn-outline-primary" id="searchBtn">
+                        <i class="align-middle" data-feather="search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="card-body p-0">
+                <div id="category-tree-container" class="category-tree-container p-3" style="max-height: 70vh; overflow-y: auto;">
+                    @if (!Model.Categories.Any())
+                    {
+                        <div class="text-center py-5">
+                            <i class="align-middle" data-feather="folder" style="width: 48px; height: 48px;"></i>
+                            <p class="mt-2 mb-0">No categories found.</p>
+                        </div>
+                    }
+                    else
+                    {
+                        @await Html.PartialAsync("_CategoryTreePartial", Model.Categories)
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Side: Form Panel -->
+    <div class="col-lg-7 col-xl-8">
+        <div id="formPanel">
+            <div class="card">
+                <div class="card-body text-center py-5">
+                    <i class="align-middle" data-feather="mouse-pointer" style="width: 48px; height: 48px; color: #6c757d;"></i>
+                    <h5 class="mt-3">Select a category</h5>
+                    <p class="text-muted">Click on any category to view or edit its details</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Hidden anti-forgery token -->
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@latest/Sortable.min.js"></script>
+    <script>
+        function showConfirm(message, onConfirm) {
+            $('#confirmModalMessage').text(message);
+            $('#confirmModal').modal('show');
+
+            $('#confirmModalOk').off('click').on('click', function () {
+                $('#confirmModal').modal('hide');
+                if (onConfirm) onConfirm();
+            });
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+
+            var toastHtml = `
+                <div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" role="alert" style="z-index: 1100;">
+                    <div class="d-flex">
+                        <div class="toast-body">
+                            <i class="align-middle me-2" data-feather="${icon}"></i>
+                            ${message}
+                        </div>
+                        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                    </div>
+                </div>
+            `;
+
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+
+            setTimeout(() => {
+                $('.toast').last().remove();
+            }, 3000);
+        }
+
+        // Load category details into right panel
+        function loadCategoryDetails(id) {
+            $('#loadingSpinner').fadeIn(200);
+            $.ajax({
+                url: '@Url.Action("DetailsPartial", "Categories")',
+                type: 'GET',
+                data: { id: id },
+                success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
+                    $('#formPanel').html(response);
+                    feather.replace();
+                },
+                error: function() {
+                    $('#loadingSpinner').fadeOut(200);
+                    showToast('error', 'Error loading category details.');
+                }
+            });
+        }
+
+        // Load create form
+        function loadCreateForm() {
+            $('#loadingSpinner').fadeIn(200);
+            $.ajax({
+                url: '@Url.Action("CreatePartial", "Categories")',
+                type: 'GET',
+                success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
+                    $('#formPanel').html(response);
+                    feather.replace();
+                },
+                error: function() {
+                    $('#loadingSpinner').fadeOut(200);
+                    showToast('error', 'Error loading create form.');
+                }
+            });
+        }
+
+        // Load edit form
+        function loadEditForm(id) {
+            $('#loadingSpinner').fadeIn(200);
+            $.ajax({
+                url: '@Url.Action("EditPartial", "Categories")',
+                type: 'GET',
+                data: { id: id },
+                success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
+                    $('#formPanel').html(response);
+                    feather.replace();
+                },
+                error: function() {
+                    $('#loadingSpinner').fadeOut(200);
+                    showToast('error', 'Error loading edit form.');
+                }
+            });
+        }
+
+        // Submit create form
+        function submitCreateForm() {
+            var formData = $('#createCategoryForm').serialize();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $('#loadingSpinner').fadeIn(200);
+            $.ajax({
+                url: '@Url.Action("Create", "Categories")',
+                type: 'POST',
+                data: formData,
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
+                    if (response.success) {
+                        showToast('success', response.message);
+                        refreshCategoryTree();
+                        loadCreateForm(); // Reset form
+                    } else {
+                        showToast('error', response.message);
+                    }
+                },
+                error: function(xhr) {
+                    $('#loadingSpinner').fadeOut(200);
+                    console.error('Error:', xhr);
+                    showToast('error', 'An error occurred. Please try again.');
+                }
+            });
+        }
+
+        // Submit edit form
+        function submitEditForm() {
+            var formData = $('#editCategoryForm').serialize();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $('#loadingSpinner').fadeIn(200);
+            $.ajax({
+                url: '@Url.Action("Edit", "Categories")',
+                type: 'POST',
+                data: formData,
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
+                    if (response.success) {
+                        showToast('success', response.message);
+                        refreshCategoryTree();
+                        $('#formPanel').html('<div class="card"><div class="card-body text-center py-5"><i class="align-middle" data-feather="check-circle" style="width: 48px; height: 48px; color: #28a745;"></i><h5 class="mt-3">Category Updated</h5><p class="text-muted">Select a category to continue</p></div></div>');
+                    } else {
+                        showToast('error', response.message);
+                    }
+                },
+                error: function(xhr) {
+                    $('#loadingSpinner').fadeOut(200);
+                    console.error('Error:', xhr);
+                    showToast('error', 'An error occurred. Please try again.');
+                }
+            });
+        }
+
+        // Delete category - UPDATED with showConfirm
+        function deleteCategory(id, name) {
+            showConfirm(`Are you sure you want to delete category "${name}"? This action cannot be undone.`, function() {
+                $('#loadingSpinner').fadeIn(200);
+                var token = $('input[name="__RequestVerificationToken"]').val();
+
+                $.ajax({
+                    url: '@Url.Action("Delete", "Categories")',
+                    type: 'POST',
+                    data: {
+                        id: id,
+                        __RequestVerificationToken: token
+                    },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshCategoryTree();
+                            $('#formPanel').html('<div class="card"><div class="card-body text-center py-5"><i class="align-middle" data-feather="trash-2" style="width: 48px; height: 48px; color: #28a745;"></i><h5 class="mt-3">Category Deleted</h5><p class="text-muted">Select a category to continue</p></div></div>');
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'Error deleting category.');
+                    }
+                });
+            });
+        }
+
+        // Refresh category tree
+        function refreshCategoryTree() {
+            var searchTerm = $('#searchInput').val();
+
+            $.ajax({
+                url: '@Url.Action("TreePartial", "Categories")',
+                type: 'GET',
+                data: { searchTerm: searchTerm },
+                success: function(response) {
+                    $('#category-tree-container').html(response);
+                    initDragAndDrop();
+                    feather.replace();
+                }
+            });
+        }
+
+        // Initialize drag and drop
+        function initDragAndDrop() {
+            document.querySelectorAll('.category-list').forEach(list => {
+                new Sortable(list, {
+                    group: 'categories',
+                    animation: 300,
+                    handle: '.drag-handle',
+                    onEnd: function() {
+                        saveOrder();
+                    }
+                });
+            });
+        }
+
+        // Save reorder
+        function saveOrder() {
+            var reorderData = [];
+            var lists = document.querySelectorAll('.category-list');
+
+            lists.forEach(list => {
+                var parentId = list.getAttribute('data-parent-id');
+                var items = list.querySelectorAll('.category-item');
+
+                items.forEach((item, index) => {
+                    reorderData.push({
+                        id: parseInt(item.getAttribute('data-id')),
+                        parentId: parentId === 'null' ? null : parseInt(parentId),
+                        displayOrder: index
+                    });
+                });
+            });
+
+            var token = $('input[name="__RequestVerificationToken"]').val();
+
+            $.ajax({
+                url: '@Url.Action("Reorder", "Categories")',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify(reorderData),
+                headers: {
+                    'RequestVerificationToken': token
+                },
+                success: function(response) {
+                    if (response.success) {
+                        showToast('success', response.message);
+                    } else {
+                        showToast('error', response.message);
+                    }
+                },
+                error: function() {
+                    showToast('error', 'Error saving order.');
+                }
+            });
+        }
+
+        // Search functionality
+        $('#searchBtn').on('click', function() {
+            refreshCategoryTree();
+        });
+
+        $('#searchInput').on('keypress', function(e) {
+            if (e.which === 13) {
+                refreshCategoryTree();
+            }
+        });
+
+        $(document).ready(function() {
+            initDragAndDrop();
+            feather.replace();
+        });
+    </script>
+}

@@ -1,0 +1,108 @@
+@model Store_Management_System.ViewModels.ReturnIndexViewModel
+@{
+    ViewData["Title"] = "Returns to Supplier";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Returns to Supplier</h1>
+        <span class="badge bg-dark text-white ms-2">Outbound</span>
+    </div>
+    <a asp-action="Create" class="btn btn-warning">
+        <i class="align-middle" data-feather="rotate-ccw"></i> New Return
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="row">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <input type="text" id="searchInput" class="form-control" placeholder="Search by RTV # or Supplier..." value="@Model?.SearchTerm" />
+                    <button class="btn btn-outline-primary" id="searchBtn">
+                        <i class="align-middle" data-feather="search"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive table-scrollable">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>RTV #</th>
+                        <th>Original GRN</th>
+                        <th>Supplier</th>
+                        <th>Return Date</th>
+                        <th>Items</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model == null || Model.Returns == null || !Model.Returns.Any())
+                    {
+                        <tr>
+                            <td colspan="7" class="text-center py-4">
+                                <i class="align-middle" data-feather="truck" style="width: 48px; height: 48px;"></i>
+                                <p class="mt-2 mb-0">No returns found.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        foreach (var r in Model.Returns)
+                        {
+                            <tr>
+                                <td><code>@r.VoucherNumber</code></td>
+                                <td>@(r.OriginalVoucherNumber ?? "-")</td>
+                                <td><strong>@r.SupplierName</strong></td>
+                                <td>@(r.VoucherDate.ToString("yyyy-MM-dd"))</td>
+                                <td><span class="badge bg-info">@r.ItemCount</span></td>
+                                <td><span class="badge bg-@((r.Status == "Posted") ? "success" : "secondary")">@r.Status</span></td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        <a asp-action="Details" asp-route-id="@r.Id" class="btn btn-sm btn-info" title="View">
+                                            <i class="align-middle" data-feather="eye"></i>
+                                        </a>
+                                        <a asp-controller="GoodsReceipts" asp-action="Details" asp-route-id="@r.OriginalVoucherId" class="btn btn-sm btn-secondary" title="Original GRN">
+                                            <i class="align-middle" data-feather="package"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between">
+            <small>Page @Model?.CurrentPage of @Model?.TotalPages</small>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" disabled="@(Model == null || Model.CurrentPage <= 1)">Previous</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" disabled="@(Model == null || Model.CurrentPage >= Model.TotalPages)">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        var currentPage = @(Model?.CurrentPage ?? 1);
+        var searchTerm = '@(Model?.SearchTerm ?? string.Empty)';
+
+        function refreshPage() {
+            var url = '@Url.Action("Index", "Returns")?searchTerm=' + encodeURIComponent(searchTerm) + '&page=' + currentPage;
+            window.location.href = url;
+        }
+
+        function previousPage() { if (currentPage > 1) { currentPage--; refreshPage(); } }
+        function nextPage() { currentPage++; refreshPage(); }
+
+        $('#searchBtn').on('click', function() { searchTerm = $('#searchInput').val(); currentPage = 1; refreshPage(); });
+        $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); currentPage = 1; refreshPage(); } });
+    </script>
+}

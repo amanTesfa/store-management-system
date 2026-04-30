@@ -1,0 +1,592 @@
+﻿@model AIIntelligenceViewModel
+
+@{
+    ViewData["Title"] = "AI Intelligence Center";
+}
+
+<div class="mb-3">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <h1 class="h3 d-inline align-middle">🧠 AI Intelligence Center</h1>
+            <span class="badge bg-dark text-white ms-2">Powered by ML.NET</span>
+        </div>
+        <div class="form-check form-switch">
+            <input class="form-check-input" type="checkbox" id="aiToggle" @(Model.IsAIEnabled ? "checked" : "")>
+            <label class="form-check-label fw-bold" for="aiToggle">
+                <i class="align-middle" data-feather="cpu"></i> AI Features @(Model.IsAIEnabled ? "ON" : "OFF")
+            </label>
+        </div>
+    </div>
+</div>
+
+<!-- AI Status Card -->
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="row align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                    <div class="me-3">
+                        <i class="align-middle" data-feather="activity" style="width: 48px; height: 48px;"></i>
+                    </div>
+                    <div>
+                        <h5 class="mb-1">AI Model Status</h5>
+                        <p class="mb-0 text-muted">
+                            @if (Model.ModelStatus.IsTrained)
+                            {
+                                <span class="text-success">● Active</span>
+                            }
+                            else
+                            {
+                                <span class="text-warning">● Not trained</span>
+                            }
+                            | Last trained: @(Model.ModelStatus.LastTrained?.ToString("MMM dd, yyyy") ?? "Never")
+                            | Records: @Model.ModelStatus.RecordsUsed
+                            | Confidence: @(Model.ModelStatus.Confidence * 100)% 
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 text-md-end">
+                <button class="btn btn-outline-primary btn-sm" onclick="retrainModel()">
+                    <i class="align-middle" data-feather="refresh-cw"></i> Retrain Model
+                </button>
+                <a asp-controller="MLTraining" asp-action="Index" class="btn btn-outline-secondary btn-sm ms-2">
+                    <i class="align-middle" data-feather="settings"></i> Training Center
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-primary">
+            <div class="card-body text-center">
+                <h5 class="text-primary mb-2">📈 Demand Forecast</h5>
+                <h2 class="mb-0">@Model.DemandForecasts.Count</h2>
+                <small class="text-muted">active predictions</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <h5 class="text-warning mb-2">⚠️ Stock Alerts</h5>
+                <h2 class="mb-0">@Model.SmartAlerts.Count(a => a.Severity == "Critical")</h2>
+                <small class="text-muted">critical alerts</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h5 class="text-info mb-2">💰 Price Optimizer</h5>
+                <h2 class="mb-0">@Model.PriceOptimizations.Count</h2>
+                <small class="text-muted">suggestions available</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h5 class="text-success mb-2">🏆 Suppliers</h5>
+                <h2 class="mb-0">@Model.SupplierScores.Count</h2>
+                <small class="text-muted">active suppliers</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.IsAIEnabled)
+{
+    <!-- Demand Forecast Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">📈 Demand Forecast</h5>
+            <small>AI predicted sales for next month</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Product</th>
+                            <th class="text-end">Current Stock</th>
+                            <th class="text-end">Predicted Demand</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in Model.DemandForecasts.Take(10))
+                        {
+                            var statusClass = item.Status == "Critical" ? "danger" : 
+                                             item.Status == "Warning" ? "warning" : "success";
+                            <tr>
+                                <td><strong>@item.ProductName</strong></td>
+                                <td class="text-end">@item.CurrentStock</td>
+                                <td class="text-end fw-bold">@item.PredictedDemand</td>
+                                <td><span class="badge bg-@statusClass">@item.Status</span></td>
+                                <td>
+                                    @if (item.Status == "Critical")
+                                    {
+                                        <a asp-controller="PurchaseOrders" asp-action="Create" asp-route-productId="@item.ProductId" class="btn btn-sm btn-primary">Order Now</a>
+                                    }
+                                
+                              </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+ 
+    <!-- Smart Stock Alerts Section -->
+    @if (Model.SmartAlerts.Any())
+    {
+        <div class="card mb-4 border-warning">
+            <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">⚠️ Smart Stock Alerts</h5>
+                <small>AI-generated urgent notifications</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    @foreach (var alert in Model.SmartAlerts)
+                    {
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge @(alert.Severity == "Critical" ? "bg-danger" : "bg-warning") me-2">@alert.Severity</span>
+                                    <strong>@alert.ProductName</strong>
+                                </div>
+                                <div>
+                                    <span class="text-danger">@alert.CurrentStock units left</span>
+                                    <span class="text-muted mx-2">|</span>
+                                    <span>Will run out in <strong>@alert.DaysRemaining days</strong></span>
+                                </div>
+                                <a asp-controller="PurchaseOrders" asp-action="Create" asp-route-productId="@alert.ProductId" class="btn btn-sm btn-primary">
+                                    Order @alert.SuggestedOrder units
+                                </a>
+                            </div>
+                            <div class="progress mt-2" style="height: 4px;">
+                                <div class="progress-bar bg-danger" role="progressbar" style="width: @(Math.Min(100, (alert.CurrentStock / (decimal)alert.SuggestedOrder * 100)))%"></div>
+                            </div>
+                            <small class="text-muted">Daily sales: @alert.DailySales units/day | Suggested order: @alert.SuggestedOrder units</small>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Price Optimizer Section -->
+    @if (Model.PriceOptimizations.Any())
+    {
+        <div class="card mb-4">
+            <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">💰 Price Optimizer</h5>
+                <small>AI suggested price adjustments</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th class="text-end">Current Price</th>
+                                <th class="text-end">Suggested Price</th>
+                                <th>Expected Impact</th>
+                                <th>Reason</th>
+                             </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.PriceOptimizations)
+                            {
+                                 <tr>
+                                    <td><strong>@item.ProductName</strong></td>
+                                    <td class="text-end">@item.CurrentPrice.ToString("C")</td>
+                                    <td class="text-end text-success">@item.SuggestedPrice.ToString("C")</td>
+                                    <td>@item.ExpectedImpact</td>
+                                    <td><small class="text-muted">@item.Reason</small></td>
+                                 </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    }
+
+    <!-- Supplier Scorecard Section -->
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">🏆 Supplier Scorecard</h5>
+            <small>AI evaluated performance</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Supplier</th>
+                            <th>Rating</th>
+                            <th class="text-end">Delivery (days)</th>
+                            <th>Price vs Market</th>
+                            <th>Quality</th>
+                            <th>Recommendation</th>
+                         </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var supplier in Model.SupplierScores)
+                        {
+                             <tr>
+                                <td><strong>@supplier.SupplierName</strong></td>
+                                 <td>
+                                     @for (int i = 1; i <= 5; i++)
+                                     {
+                                         if (i <= supplier.Rating)
+                                         {
+                                             <i class="fas fa-star text-warning"></i>
+                                         }
+                                         else
+                                         {
+                                             <i class="fas fa-star text-secondary"></i>
+                                         }
+                                     }
+                                 </td>
+                                 <td class="text-end">@supplier.DeliveryDays</td>
+                                 <td>@supplier.PriceCompetitiveness</td>
+                                 <td>@supplier.QualityScore%</td>
+                                 <td>
+                                     @if (supplier.Rating >= 4)
+                                     {
+                                         <span class="badge bg-success">Excellent</span>
+                                     }
+                                     else if (supplier.Rating >= 3)
+                                     {
+                                         <span class="badge bg-warning">Good</span>
+                                     }
+                                     else
+                                     {
+                                         <span class="badge bg-danger">Review</span>
+                                     }
+                                 </td>
+                              </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Anomaly Detection Section -->
+    @if (Model.Anomalies.Any())
+    {
+        <div class="card mb-4 border-danger">
+            <div class="card-header bg-danger text-white d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">🚨 Anomaly Detection</h5>
+                <small>AI flagged unusual patterns</small>
+            </div>
+            <div class="card-body p-0">
+                <div class="list-group list-group-flush">
+                    @foreach (var anomaly in Model.Anomalies)
+                    {
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <span class="badge bg-danger me-2">@anomaly.Severity</span>
+                                    <strong>@anomaly.AnomalyType</strong> - @anomaly.ProductName
+                                </div>
+                                <div>
+                                    Expected: @anomaly.ExpectedValue | Actual: @anomaly.ActualValue
+                                </div>
+                                <small class="text-muted">@anomaly.Recommendation</small>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    }
+}
+else
+{
+    <div class="alert alert-info text-center py-5">
+        <i class="align-middle" data-feather="cpu" style="width: 64px; height: 64px;"></i>
+        <h4 class="mt-3">AI Features are Disabled</h4>
+        <p>Toggle the switch above to enable AI-powered insights for your inventory.</p>
+        <small class="text-muted">AI helps predict demand, optimize prices, and prevent stockouts.</small>
+    </div>
+}
+<!-- Chat Widget -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1050;">
+        <div id="chatWidget" class="card shadow-lg" style="width: 350px; display: none;">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center py-2">
+                <h6 class="mb-0">
+                    <i class="align-middle me-1" data-feather="message-circle"></i>
+                    AI Inventory Assistant
+                </h6>
+                <div>
+                    <button class="btn btn-sm btn-outline-light me-1" onclick="toggleChatFullscreen()" style="padding: 0 6px;">
+                        <i class="align-middle" data-feather="maximize-2" style="width: 14px; height: 14px;"></i>
+                    </button>
+                    <button class="btn btn-sm btn-outline-light" onclick="toggleChat()" style="padding: 0 6px;">
+                        <i class="align-middle" data-feather="x" style="width: 14px; height: 14px;"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div id="chatMessages" class="card-body overflow-auto" style="height: 350px; max-height: 350px;">
+                <div class="d-flex mb-2">
+                    <div class="bg-light rounded p-2 small">
+                        👋 Hello! I'm your AI inventory assistant. Ask me about stock, forecasts, or products!
+                    </div>
+                </div>
+                <div class="d-flex justify-content-end mb-2">
+                    <div class="bg-light rounded p-2 small text-muted">
+                        Try: "What's in stock?" or "Forecast for Product X"
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-footer bg-light p-2">
+                <div class="input-group input-group-sm">
+                    <input type="text" id="chatInput" class="form-control" placeholder="Ask me anything..." aria-label="Chat message">
+                    <button class="btn btn-primary" type="button" onclick="sendChatMessage()">
+                        <i class="align-middle" data-feather="send" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </div>
+                <div class="mt-1 text-muted small">
+                    <i class="align-middle" data-feather="cpu" style="width: 12px; height: 12px;"></i>
+                    <span>Powered by ML.NET</span>
+                    <a href="#" onclick="showChatExamples(event)" class="ms-2 text-primary">Examples</a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Toggle Button -->
+        <button id="chatToggleBtn" onclick="toggleChat()" class="btn btn-primary rounded-circle shadow-lg" style="width: 60px; height: 60px;">
+            <i class="align-middle" data-feather="message-circle" style="width: 28px; height: 28px;"></i>
+        </button>
+    </div>
+</div>
+@section Scripts {
+    <script>
+         let isChatOpen = false;
+        let isTyping = false;
+
+        function toggleChat() {
+            const widget = document.getElementById('chatWidget');
+            const btn = document.getElementById('chatToggleBtn');
+
+            isChatOpen = !isChatOpen;
+
+            if (isChatOpen) {
+                widget.style.display = 'block';
+                btn.style.display = 'none';
+                document.getElementById('chatInput').focus();
+            } else {
+                widget.style.display = 'none';
+                btn.style.display = 'block';
+            }
+        }
+
+        function toggleChatFullscreen() {
+            const messages = document.getElementById('chatMessages');
+            if (messages.style.height === '500px') {
+                messages.style.height = '350px';
+            } else {
+                messages.style.height = '500px';
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatInput');
+            const query = input.value.trim();
+
+            if (!query || isTyping) return;
+
+            // Add user message to chat
+            addChatMessage(query, 'user');
+            input.value = '';
+
+            // Show typing indicator
+            isTyping = true;
+            addTypingIndicator();
+
+            try {
+                const response = await fetch('/AIIntelligence/ChatQuery', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ query: query })
+                });
+
+                const data = await response.json();
+
+                // Remove typing indicator
+                removeTypingIndicator();
+
+                // Add bot response
+                addChatMessage(data.answer, 'bot');
+
+                // If there's additional data, show a subtle hint
+                if (data.data && data.data.type === 'DemandForecast' && data.data.predictedSales) {
+                    setTimeout(() => {
+                        addChatMessage(`📊 Predicted: ${data.data.predictedSales} units next month`, 'bot-info');
+                    }, 500);
+                }
+
+            } catch (error) {
+                removeTypingIndicator();
+                addChatMessage('Sorry, I encountered an error. Please try again.', 'bot');
+            }
+
+            isTyping = false;
+        }
+
+        function addChatMessage(text, sender) {
+            const messagesDiv = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `d-flex mb-2 ${sender === 'user' ? 'justify-content-end' : ''}`;
+
+            const bubbleClass = sender === 'user' ? 'bg-primary text-white' :
+                               sender === 'bot-info' ? 'bg-info text-white small' : 'bg-light';
+
+            messageDiv.innerHTML = `
+                <div class="${bubbleClass} rounded p-2" style="max-width: 80%;">
+                    ${text}
+                </div>
+            `;
+
+            messagesDiv.appendChild(messageDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function addTypingIndicator() {
+            const messagesDiv = document.getElementById('chatMessages');
+            const typingDiv = document.createElement('div');
+            typingDiv.id = 'typingIndicator';
+            typingDiv.className = 'd-flex mb-2';
+            typingDiv.innerHTML = `
+                <div class="bg-light rounded p-2">
+                    <span class="spinner-grow spinner-grow-sm me-1" role="status"></span>
+                    <span class="spinner-grow spinner-grow-sm me-1" role="status" style="animation-delay: 0.1s"></span>
+                    <span class="spinner-grow spinner-grow-sm" role="status" style="animation-delay: 0.2s"></span>
+                </div>
+            `;
+            messagesDiv.appendChild(typingDiv);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const indicator = document.getElementById('typingIndicator');
+            if (indicator) {
+                indicator.remove();
+            }
+        }
+
+        async function showChatExamples(event) {
+            event.preventDefault();
+
+            try {
+                const response = await fetch('/AIIntelligence/GetChatHelp');
+                const data = await response.json();
+
+                let examplesHtml = '<div class="bg-light rounded p-2 small"><strong>Try asking:</strong><br>';
+                data.examples.forEach(ex => {
+                    examplesHtml += `• "${ex}"<br>`;
+                });
+                examplesHtml += '</div>';
+
+                addChatMessage(examplesHtml.replace(/<br>/g, '\n'), 'bot');
+            } catch (error) {
+                // Fallback examples
+                const examples = [
+                    "What's the forecast for wireless mouse?",
+                    "How many laptops are in stock?",
+                    "Show me low stock items"
+                ];
+
+                let msg = 'Try asking:\n';
+                examples.forEach(ex => msg += `• "${ex}"\n`);
+                addChatMessage(msg, 'bot');
+            }
+        }
+
+        // Handle Enter key in chat input
+        document.addEventListener('DOMContentLoaded', function() {
+            const chatInput = document.getElementById('chatInput');
+            if (chatInput) {
+                chatInput.addEventListener('keypress', function(e) {
+                    if (e.key === 'Enter') {
+                        sendChatMessage();
+                    }
+                });
+            }
+        });
+        $('#aiToggle').on('change', function() {
+            var isEnabled = $(this).is(':checked');
+            
+            $('#loadingSpinner').fadeIn(200);
+            
+            $.ajax({
+                url: '@Url.Action("ToggleAI", "AIIntelligence")',
+                type: 'POST',
+                data: { enable: isEnabled },
+                success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        showToast('error', 'Failed to toggle AI features');
+                        $('#aiToggle').prop('checked', !isEnabled);
+                    }
+                },
+                error: function() {
+                    $('#loadingSpinner').fadeOut(200);
+                    showToast('error', 'An error occurred');
+                    $('#aiToggle').prop('checked', !isEnabled);
+                }
+            });
+        });
+        
+        function retrainModel() {
+            showConfirm('Retrain the AI model with the latest data? This may take a few minutes.', function() {
+                $('#loadingSpinner').fadeIn(200);
+                
+                $.ajax({
+                    url: '@Url.Action("Train", "MLTraining")',
+                    type: 'POST',
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', 'Model retrained successfully!');
+                            setTimeout(function() { location.reload(); }, 2000);
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'Training failed');
+                    }
+                });
+            });
+        }
+        
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+    </script>
+}

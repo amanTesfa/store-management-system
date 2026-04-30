@@ -1,0 +1,235 @@
+﻿@{
+    ViewData["Title"] = "Import Articles";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">Import Articles</h1>
+    <span class="badge bg-dark text-white ms-2">Bulk Import</span>
+</div>
+
+<div class="row">
+    <div class="col-md-8">
+        <!-- Upload Card -->
+        <div class="card">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Upload File</h5>
+            </div>
+            <div class="card-body">
+                <form asp-action="Import" method="post" enctype="multipart/form-data" id="importForm">
+                    @Html.AntiForgeryToken()
+
+                    <div class="mb-3">
+                        <label class="form-label">Select CSV or Excel File *</label>
+                        <input type="file" name="file" class="form-control" id="importFile"
+                               accept=".csv,.xlsx,.xls" />
+                        <small class="text-muted">Max file size: 10MB</small>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-info" id="previewBtn">
+                            <i class="align-middle" data-feather="eye"></i> Preview Data
+                        </button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="align-middle" data-feather="upload"></i> Import Articles
+                        </button>
+                        <a asp-action="Index" class="btn btn-secondary">
+                            <i class="align-middle" data-feather="arrow-left"></i> Back to List
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Preview Card -->
+        <div class="card mt-3" id="previewCard" style="display: none;">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5 class="card-title mb-0">Data Preview</h5>
+                <span class="badge bg-info" id="previewCount"></span>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive table-scrollable">
+                    <table class="table table-bordered mb-0">
+                        <thead class="table-light">
+                            <tr>
+                                <th>#</th>
+                                <th>Name</th>
+                                <th>Code</th>
+                                <th>Category</th>
+                                <th>Price</th>
+                                <th>Cost</th>
+                                <th>Unit</th>
+                                <th>Valid</th>
+                            </tr>
+                        </thead>
+                        <tbody id="previewBody">
+                            <tr>
+                                <td colspan="8" class="text-center py-4 text-muted">
+                                    Upload a file and click "Preview Data" to see content.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <!-- Instructions Card -->
+        <div class="card">
+            <div class="card-header bg-info text-white">
+                <h5 class="card-title mb-0">
+                    <i class="align-middle" data-feather="info"></i> Instructions
+                </h5>
+            </div>
+            <div class="card-body">
+                <h6>Required Columns:</h6>
+                <ul class="small">
+                    <li><strong>Article Name</strong> - Name of the product</li>
+                    <li><strong>Category</strong> - Product category</li>
+                </ul>
+
+                <h6>Optional Columns:</h6>
+                <ul class="small">
+                    <li><strong>Article Code</strong> - SKU code (auto-generated if blank)</li>
+                    <li><strong>Price</strong> - Selling price</li>
+                    <li><strong>Cost</strong> - Purchase cost</li>
+                    <li><strong>Unit</strong> - Unit of measure (default: Piece)</li>
+                    <li><strong>Description</strong> - Product description</li>
+                    <li><strong>Group</strong> - Article group</li>
+                    <li><strong>Reorder Level</strong> - Minimum stock level</li>
+                    <li><strong>Safety Stock</strong> - Buffer stock</li>
+                    <li><strong>Tax Rate</strong> - Tax percentage</li>
+                    <li><strong>Barcode</strong> - Primary barcode</li>
+                </ul>
+
+                <hr />
+
+                <h6>Sample CSV Format:</h6>
+                <div class="bg-light p-2 rounded small" style="font-family: monospace; font-size: 11px;">
+                    Article Name,Category,Price,Cost,Unit<br />
+                    "Wireless Mouse","Electronics",25.99,15.00,Piece<br />
+                    "USB Cable","Accessories",9.99,3.50,Piece<br />
+                    "Monitor Stand","Furniture",89.00,45.00,Piece
+                </div>
+
+                <div class="mt-3">
+                    <a href="#" class="btn btn-sm btn-outline-primary" onclick="downloadSample()">
+                        <i class="align-middle" data-feather="download"></i> Download Sample CSV
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tips Card -->
+        <div class="card mt-3">
+            <div class="card-header">
+                <h5 class="card-title mb-0">Tips</h5>
+            </div>
+            <div class="card-body small">
+                <ul class="mb-0">
+                    <li>Column headers should be in the <strong>first row</strong></li>
+                    <li>Column names are <strong>not case-sensitive</strong></li>
+                    <li>Use quotes around values containing commas</li>
+                    <li>New categories will be <strong>auto-created</strong> if they don't exist</li>
+                    <li>Duplicate article codes will get new auto-generated codes</li>
+                    <li>Save Excel files as <strong>.csv</strong> for best compatibility</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        // File validation
+        $('#importFile').on('change', function() {
+            var file = this.files[0];
+            if (file) {
+                var extension = file.name.split('.').pop().toLowerCase();
+                if (extension !== 'csv' && extension !== 'xlsx' && extension !== 'xls') {
+                    alert('Please select a CSV or Excel file (.csv, .xlsx, .xls)');
+                    $(this).val('');
+                    return;
+                }
+                if (file.size > 10 * 1024 * 1024) {
+                    alert('File size exceeds 10MB limit.');
+                    $(this).val('');
+                    return;
+                }
+            }
+        });
+
+        // Preview functionality
+        $('#previewBtn').on('click', function() {
+            var fileInput = $('#importFile')[0];
+            if (!fileInput.files || !fileInput.files[0]) {
+                alert('Please select a file first.');
+                return;
+            }
+
+            var formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+
+            $('#loadingSpinner').fadeIn(200);
+
+            $.ajax({
+                url: '@Url.Action("PreviewImport", "Articles")',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    $('#loadingSpinner').fadeOut(200);
+                    if (response.success) {
+                        displayPreview(response);
+                    } else {
+                        alert('Error: ' + response.message);
+                    }
+                },
+                error: function() {
+                    $('#loadingSpinner').fadeOut(200);
+                    alert('Error previewing file.');
+                }
+            });
+        });
+
+        function displayPreview(data) {
+            $('#previewCard').show();
+            $('#previewCount').text(data.totalRows + ' total rows (showing first ' + data.previewCount + ')');
+
+            var html = '';
+            data.preview.forEach(function(row) {
+                var validIcon = row.isValid ? '<span class="badge bg-success">✓</span>' : '<span class="badge bg-danger">✗</span>';
+                html += `
+                    <tr>
+                        <td>${row.row}</td>
+                        <td>${row.articleName || '<span class="text-muted">-</span>'}</td>
+                        <td><code>${row.articleCode || 'Auto'}</code></td>
+                        <td>${row.categoryName || '<span class="text-danger">Missing</span>'}</td>
+                        <td class="text-end">${row.standardPrice ? '$' + row.standardPrice.toFixed(2) : '-'}</td>
+                        <td class="text-end">${row.standardCost ? '$' + row.standardCost.toFixed(2) : '-'}</td>
+                        <td>${row.baseUnit || 'Piece'}</td>
+                        <td>${validIcon}</td>
+                    </tr>
+                `;
+            });
+
+            $('#previewBody').html(html);
+        }
+
+        function downloadSample() {
+            var csvContent = "Article Name,Article Code,Category,Price,Cost,Unit,Description,Reorder Level,Safety Stock,Tax Rate,Barcode\n";
+            csvContent += '"Wireless Mouse",,Electronics,25.99,15.00,Piece,"Ergonomic wireless mouse",10,5,15,\n';
+            csvContent += '"USB-C Cable",,Accessories,9.99,3.50,Piece,"1m USB-C charging cable",20,10,15,\n';
+            csvContent += '"Monitor Stand",,Furniture,89.00,45.00,Piece,"Adjustable monitor stand",5,2,15,\n';
+
+            var blob = new Blob([csvContent], { type: 'text/csv' });
+            var link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'article_import_template.csv';
+            link.click();
+        }
+    </script>
+}

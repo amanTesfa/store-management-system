@@ -1,0 +1,83 @@
+﻿@model List<LowStockReportViewModel>
+@Html.AntiForgeryToken()
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <div class="row g-2 w-100">
+        <div class="col-md-3">
+            <select id="warehouseFilter" class="form-select" asp-items="ViewBag.Warehouses"></select>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-primary w-100" id="applyFilterBtn">Apply Filter</button>
+        </div>
+        <div class="col-md-2">
+            <button class="btn btn-success w-100" id="exportExcelBtn">
+                <i class="align-middle" data-feather="download"></i> Export CSV
+            </button>
+        </div>
+    </div>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="alert alert-success text-center">
+        <i class="align-middle" data-feather="check-circle"></i> No low stock items found. All products are well stocked!
+    </div>
+}
+else
+{
+    <div class="table-responsive table-scrollable">
+        <table class="table table-bordered table-hover datatable">
+            <thead class="table-light">
+                <tr>
+                    <th>SKU</th>
+                    <th>Product Name</th>
+                    <th>Category</th>
+                    <th class="text-end">Current Stock</th>
+                    <th class="text-end">Reorder Level</th>
+                    <th class="text-end">Shortage</th>
+                    <th class="text-end">Unit Price</th>
+                    <th class="text-end">Potential Loss</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.ArticleCode</td>
+                        <td>@item.ArticleName</td>
+                        <td>@item.CategoryName</td>
+                        <td class="text-end text-danger fw-bold">@item.CurrentStock</td>
+                        <td class="text-end">@item.ReorderLevel</td>
+                        <td class="text-end text-warning">@item.Shortage</td>
+                        <td class="text-end">@item.UnitPrice.ToString("C")</td>
+                        <td class="text-end text-danger">@item.PotentialLoss.ToString("C")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+
+<script>
+    $('#applyFilterBtn').on('click', function () {
+        var warehouseId = $('#warehouseFilter').val();
+        $.ajax({
+            url: '@Url.Action("LowStock", "Reports")',
+            type: 'GET',
+            data: { warehouseId: warehouseId },
+            success: function (response) {
+                $('#lowStockContent').html(response);
+                feather.replace();
+            }
+        });
+    });
+
+    $('#exportExcelBtn').on('click', function () {
+        var warehouseId = $('#warehouseFilter').val();
+        var form = $('<form action="@Url.Action("ExportLowStockToExcel", "Reports")" method="post"></form>');
+        form.append('<input type="hidden" name="warehouseId" value="' + warehouseId + '" />');
+        form.append('@Html.AntiForgeryToken()');
+        $('body').append(form);
+        form.submit();
+        form.remove();
+    });
+</script>

@@ -1,0 +1,250 @@
+﻿@model BeginningBalanceIndexViewModel
+
+@{
+    ViewData["Title"] = "Beginning Balances";
+}
+
+<div class="mb-3 d-flex justify-content-between align-items-center">
+    <div>
+        <h1 class="h3 d-inline align-middle">Beginning Balances</h1>
+        <span class="badge bg-dark text-white ms-2">Opening Stock</span>
+    </div>
+    <div class="d-flex gap-2">
+        <a asp-action="Import" class="btn btn-outline-primary">
+            <i class="align-middle" data-feather="upload"></i> Import
+        </a>
+        <a asp-action="Create" class="btn btn-primary">
+            <i class="align-middle" data-feather="plus"></i> New Beginning Balance
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <div class="row g-3">
+            <div class="col-md-4">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search by number or description..." value="@Model.SearchTerm" />
+            </div>
+            <div class="col-md-3">
+                <select id="statusFilter" class="form-select" asp-items="Model.Statuses"></select>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-primary w-100" id="searchBtn">
+                    <i class="align-middle" data-feather="search"></i> Search
+                </button>
+            </div>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive table-scrollable">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Balance #</th>
+                        <th>Period</th>
+                        <th>Items</th>
+                        <th>Total Value</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th>Approved/Posted</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (!Model.Balances.Any())
+                    {
+                        <tr>
+                            <td colspan="8" class="text-center py-4">
+                                <i class="align-middle" data-feather="database" style="width: 48px; height: 48px;"></i>
+                                <p class="mt-2 mb-0">No beginning balances found.</p>
+                            </td>
+                        </tr>
+                    }
+                    else
+                    {
+                        @foreach (var balance in Model.Balances)
+                        {
+                            <tr>
+                                <td><code>@balance.BalanceNumber</code></td>
+                                <td><span>@balance.PeriodName</span></td>
+                                <td><span class="badge bg-info">@balance.TotalItems</span></td>
+                                <td><span>@balance.TotalValue.ToString("C")</span></td>
+                                <td>
+                                    <span class="badge bg-@balance.StatusClass">
+                                        @balance.Status
+                                    </span>
+                                </td>
+                                <td><span>@balance.CreatedAt.ToString("MMM dd, yyyy")</span></td>
+                                <td>
+                                    @if (balance.ApprovedAt.HasValue)
+                                    {
+                                        <small>Approved: @balance.ApprovedAt.Value.ToString("MMM dd")</small>
+                                    }
+                                    @if (balance.PostedAt.HasValue)
+                                    {
+                                        <br /><small>Posted: @balance.PostedAt.Value.ToString("MMM dd")</small>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group" role="group">
+                                        @if (balance.Status == "Draft")
+                                        {
+                                            <a asp-action="Edit" asp-route-id="@balance.Id" class="btn btn-sm btn-primary" title="Edit">
+                                                <i class="align-middle" data-feather="edit-2"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-sm btn-success" onclick="approveBalance(@balance.Id)" title="Approve">
+                                                <i class="align-middle" data-feather="check-circle"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-danger" onclick="deleteBalance(@balance.Id, '@balance.BalanceNumber')" title="Delete">
+                                                <i class="align-middle" data-feather="trash-2"></i>
+                                            </button>
+                                        }
+                                        @if (balance.Status == "Approved")
+                                        {
+                                            <button type="button" class="btn btn-sm btn-primary" onclick="postBalance(@balance.Id)" title="Post to Inventory">
+                                                <i class="align-middle" data-feather="upload"></i> Post
+                                            </button>
+                                        }
+                                        @if (balance.Status == "Posted")
+                                        {
+                                            <a asp-action="Details" asp-route-id="@balance.Id" class="btn btn-sm btn-info" title="View Details">
+                                                <i class="align-middle" data-feather="eye"></i>
+                                            </a>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer">
+        <div class="d-flex justify-content-between">
+            <small>Page @Model.CurrentPage of @Model.TotalPages</small>
+            <div>
+                <button class="btn btn-sm btn-outline-secondary" onclick="previousPage()" disabled="@(Model.CurrentPage <= 1)">Previous</button>
+                <button class="btn btn-sm btn-outline-secondary" onclick="nextPage()" disabled="@(Model.CurrentPage >= Model.TotalPages)">Next</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+    <script>
+        var currentPage = @Model.CurrentPage;
+        var searchTerm = '@Model.SearchTerm';
+        var status = '@Model.Status';
+                function showConfirm(message, onConfirm) {
+            $('#confirmModalMessage').text(message);
+            $('#confirmModal').modal('show');
+
+            $('#confirmModalOk').off('click').on('click', function () {
+                $('#confirmModal').modal('hide');
+                if (onConfirm) onConfirm();
+            });
+        }
+        function refreshPage() {
+            var url = '@Url.Action("Index", "BeginningBalance")?searchTerm=' + encodeURIComponent(searchTerm) + '&status=' + encodeURIComponent(status) + '&page=' + currentPage;
+            window.location.href = url;
+        }
+
+        function previousPage() { if (currentPage > 1) { currentPage--; refreshPage(); } }
+        function nextPage() { currentPage++; refreshPage(); }
+
+        $('#searchBtn').on('click', function() { searchTerm = $('#searchInput').val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); });
+        $('#searchInput').on('keypress', function(e) { if (e.which === 13) { searchTerm = $(this).val(); status = $('#statusFilter').val(); currentPage = 1; refreshPage(); } });
+        $('#statusFilter').on('change', function() { status = $(this).val(); currentPage = 1; refreshPage(); });
+
+                function approveBalance(id) {
+            showConfirm('Approve this beginning balance? Once approved, it can be posted to inventory.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Approve", "BeginningBalance")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
+                    }
+                });
+            });
+        }
+
+        function postBalance(id) {
+            showConfirm('Post this beginning balance to inventory? This will update stock levels and cannot be undone.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Post", "BeginningBalance")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
+                    }
+                });
+            });
+        }
+
+        function deleteBalance(id, number) {
+            showConfirm('Delete beginning balance ' + number + '? This action cannot be undone.', function() {
+                $('#loadingSpinner').fadeIn(200);
+
+                var token = $('input[name="__RequestVerificationToken"]').val();
+                $.ajax({
+                    url: '@Url.Action("Delete", "BeginningBalance")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: token },
+                    success: function(response) {
+                        $('#loadingSpinner').fadeOut(200);
+                        if (response.success) {
+                            showToast('success', response.message);
+                            refreshPage();
+                        } else {
+                            showToast('error', response.message);
+                        }
+                    },
+                    error: function() {
+                        $('#loadingSpinner').fadeOut(200);
+                        showToast('error', 'An error occurred. Please try again.');
+                    }
+                });
+            });
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = `<div class="toast align-items-center text-white ${bgClass} border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="${icon}"></i>${message}</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>`;
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(() => { $('.toast').last().remove(); }, 3000);
+        }
+    </script>
+}

@@ -1,0 +1,171 @@
+﻿@model CustomerDetailsViewModel
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="card-title mb-0">Customer Details</h5>
+        <div>
+            <button type="button" class="btn btn-sm btn-primary" onclick="loadEditForm(@Model.Id)">
+                <i class="align-middle" data-feather="edit-2"></i> Edit
+            </button>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteCustomer(@Model.Id, '@Model.DisplayName.Replace("'", "\\'")')">
+                <i class="align-middle" data-feather="trash-2"></i> Delete
+            </button>
+            <button type="button" class="btn btn-sm btn-info" onclick="loadCustomerStatement(@Model.Id)">
+                <i class="align-middle" data-feather="file-text"></i> Statement
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <!-- Customer Information Tabs -->
+        <ul class="nav nav-tabs mb-3" id="customerTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab">Basic Info</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="address-tab" data-bs-toggle="tab" data-bs-target="#address" type="button" role="tab">Address</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="financial-tab" data-bs-toggle="tab" data-bs-target="#financial" type="button" role="tab">Financial</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="orders-tab" data-bs-toggle="tab" data-bs-target="#orders" type="button" role="tab">Recent Orders</button>
+            </li>
+        </ul>
+
+        <div class="tab-content">
+            <!-- Basic Info Tab -->
+            <div class="tab-pane fade show active" id="basic" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="table-responsive table-scrollable">
+
+                        <table class="table table-bordered">
+                            <tr><th>Customer Code</th><td><code>@Model.ConsigneeCode</code></td></tr>
+                            <tr><th>Customer Type</th><td><span class="badge @(Model.ConsigneeType == "Individual" ? "bg-info" : "bg-primary")">@Model.ConsigneeType</span></td></tr>
+                            <tr><th>Display Name</th><td>@Model.DisplayName</td></tr>
+                            <tr><th>Email</th><td>@(Model.Email ?? "N/A")</td></tr>
+                            <tr><th>Phone</th><td>@(Model.Phone ?? "N/A")</td></tr>
+                            <tr><th>Mobile</th><td>@(Model.Mobile ?? "N/A")</td></tr>
+                            <tr><th>Status</th><td><span class="badge @(Model.IsActive ? "bg-success" : "bg-danger")">@(Model.IsActive ? "Active" : "Inactive")</span></td></tr>
+                        </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="table-responsive table-scrollable">
+
+                        @if (Model.ConsigneeType == "Organization")
+                        {
+                            <table class="table table-bordered">
+                                <tr><th>TIN (Tax ID)</th><td>@(Model.TIN ?? "N/A")</td></tr>
+                                <tr><th>Industry</th><td>@(Model.Industry ?? "N/A")</td></tr>
+                                <tr><th>Employees</th><td>@(Model.NumberOfEmployees?.ToString() ?? "N/A")</td></tr>
+                                <tr><th>Annual Revenue</th><td>@(Model.AnnualRevenue?.ToString("C") ?? "N/A")</td></tr>
+                                <tr><th>Website</th><td>@(Model.Website ?? "N/A")</td></tr>
+                                <tr><th>Contact Person</th><td>@(Model.ContactPerson ?? "N/A")</td></tr>
+                            </table>
+                        }
+                        else
+                        {
+                            <table class="table table-bordered">
+                                <tr><th>First Name</th><td>@(Model.FirstName ?? "N/A")</td></tr>
+                                <tr><th>Last Name</th><td>@(Model.LastName ?? "N/A")</td></tr>
+                                <tr><th>Date of Birth</th><td>@(Model.DateOfBirth?.ToString("MMM dd, yyyy") ?? "N/A")</td></tr>
+                                <tr><th>Gender</th><td>@(Model.Gender ?? "N/A")</td></tr>
+                                <tr><th>National ID</th><td>@(Model.NationalId ?? "N/A")</td></tr>
+                                <tr><th>Occupation</th><td>@(Model.Occupation ?? "N/A")</td></tr>
+                            </table>
+                        }
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Address Tab -->
+            <div class="tab-pane fade" id="address" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Shipping Address</h6>
+                        <p>@(Model.ShippingAddress ?? "N/A")</p>
+                        <p>@(Model.City ?? "") @(Model.State ?? "") @(Model.PostalCode ?? "")</p>
+                        <p>@(Model.Country ?? "")</p>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="mb-3">Billing Address</h6>
+                        <p>@(Model.BillingAddress ?? "N/A")</p>
+                        <p>@(Model.City ?? "") @(Model.State ?? "") @(Model.PostalCode ?? "")</p>
+                        <p>@(Model.Country ?? "")</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Financial Tab -->
+            <div class="tab-pane fade" id="financial" role="tabpanel">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="table-responsive table-scrollable">
+
+                        <table class="table table-bordered">
+                            <tr><th>Tax Number (VAT)</th><td>@(Model.TaxNumber ?? "N/A")</td></tr>
+                            <tr><th>Payment Terms</th><td>@(Model.PaymentTerms ?? "N/A")</td></tr>
+                            <tr><th>Price Level</th><td>@(Model.PriceLevel ?? "N/A")</td></tr>
+                        </table>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="alert @(Model.CreditStatus == "Exceeded" ? "alert-danger" : (Model.CreditStatus == "Low" ? "alert-warning" : "alert-info"))">
+                            <strong>Credit Status: @Model.CreditStatus</strong>
+                            <hr />
+                            <div>Credit Limit: @(Model.CreditLimit?.ToString("C") ?? "No limit")</div>
+                            <div>Current Balance: @Model.CurrentBalance.ToString("C")</div>
+                            <div>Available Credit: @Model.AvailableCredit.ToString("C")</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Orders Tab -->
+            <div class="tab-pane fade" id="orders" role="tabpanel">
+                @if (Model.RecentOrders.Any())
+                {
+                    <div class="table-responsive table-scrollable">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr><th>Order #</th><th>Date</th><th>Total</th><th>Status</th><th>Action</th></tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var order in Model.RecentOrders)
+                                {
+                                    <tr>
+                                        <td><code>@order.OrderNumber</code></td>
+                                        <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
+                                        <td>@order.TotalAmount.ToString("C")</td>
+                                        <td><span class="badge @(order.Status == "Completed" ? "bg-success" : "bg-warning")">@order.Status</span></td>
+                                        <td><a asp-controller="Orders" asp-action="Details" asp-route-id="@order.Id" class="btn btn-sm btn-info">View</a></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info">No orders found for this customer.</div>
+                }
+            </div>
+        </div>
+
+        <div class="mt-3 text-muted">
+            <small>Customer since: @(Model.CustomerSince?.ToString("MMM dd, yyyy") ?? Model.CreatedAt.ToString("MMM dd, yyyy"))</small>
+            @if (Model.UpdatedAt.HasValue)
+            {
+                <br />
+            
+                <small>Last updated: @Model.UpdatedAt.Value.ToString("MMM dd, yyyy HH:mm")</small>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    feather.replace();
+</script>

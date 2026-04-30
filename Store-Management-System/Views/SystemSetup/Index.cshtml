@@ -1,0 +1,294 @@
+﻿@{
+    ViewData["Title"] = "System Setup";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">System Setup</h1>
+    <span class="badge bg-dark text-white ms-2">Master Data</span>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <ul class="nav nav-tabs card-header-tabs" id="setupTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="warehouses-tab" data-bs-toggle="tab" data-bs-target="#warehouses" type="button" role="tab">
+                    <i class="align-middle" data-feather="home"></i> Warehouses
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="units-tab" data-bs-toggle="tab" data-bs-target="#units" type="button" role="tab">
+                    <i class="align-middle" data-feather="grid"></i> Units of Measure
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="fiscal-tab" data-bs-toggle="tab" data-bs-target="#fiscal" type="button" role="tab">
+                    <i class="align-middle" data-feather="calendar"></i> Fiscal Periods
+                </button>
+            </li>
+        </ul>
+    </div>
+    <div class="card-body">
+        <div class="tab-content" id="setupTabsContent">
+            <!-- Warehouses Tab -->
+            <div class="tab-pane fade show active" id="warehouses" role="tabpanel">
+                <div id="warehousesContent">
+                    <!-- Warehouses content will be loaded here -->
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Units Tab -->
+            <div class="tab-pane fade" id="units" role="tabpanel">
+                <div id="unitsContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Fiscal Periods Tab -->
+            <div class="tab-pane fade" id="fiscal" role="tabpanel">
+                <div id="fiscalContent">
+                    <div class="text-center py-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Shared Modal for All Forms -->
+<div class="modal fade" id="setupModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="setupModalTitle">Title</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="setupModalBody">
+                <!-- Form will be loaded here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+@Html.AntiForgeryToken()
+
+@section Scripts {
+
+
+    <script>
+
+                // ==================== WAREHOUSE FUNCTIONS ====================
+        function openWarehouseModal(id) {
+            $('#setupModalTitle').text(id === 0 ? 'Add Warehouse' : 'Edit Warehouse');
+            var url = id === 0 ? '@Url.Action("WarehouseCreatePartial", "SystemSetup")' : '@Url.Action("WarehouseEditPartial", "SystemSetup")?id=' + id;
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    $('#setupModalBody').html(response);
+                    $('#setupModal').modal('show');
+                    feather.replace();
+                },
+                error: function() { showToast('error', 'Error loading form.'); }
+            });
+        }
+
+        function deleteWarehouse(id, name) {
+            if (confirm('Delete warehouse "' + name + '"? This action cannot be undone.')) {
+                $.ajax({
+                    url: '@Url.Action("WarehouseDelete", "SystemSetup")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshWarehouses(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        // ==================== UNIT FUNCTIONS ====================
+        function openUnitModal(id) {
+            $('#setupModalTitle').text(id === 0 ? 'Add Unit' : 'Edit Unit');
+            var url = '@Url.Action("UnitCreatePartial", "SystemSetup")?id=' + id;
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    $('#setupModalBody').html(response);
+                    $('#setupModal').modal('show');
+                    feather.replace();
+                },
+                error: function() { showToast('error', 'Error loading form.'); }
+            });
+        }
+
+        function deleteUnit(id, name) {
+            if (confirm('Delete unit "' + name + '"? This action cannot be undone.')) {
+                $.ajax({
+                    url: '@Url.Action("UnitDelete", "SystemSetup")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshUnits(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        // ==================== FISCAL PERIOD FUNCTIONS ====================
+        function openPeriodModal(id) {
+            $('#setupModalTitle').text(id === 0 ? 'Add Fiscal Period' : 'Edit Fiscal Period');
+            var url = '@Url.Action("FiscalPeriodCreatePartial", "SystemSetup")?id=' + id;
+            $.ajax({
+                url: url,
+                type: 'GET',
+                success: function(response) {
+                    $('#setupModalBody').html(response);
+                    $('#setupModal').modal('show');
+                    feather.replace();
+                },
+                error: function() { showToast('error', 'Error loading form.'); }
+            });
+        }
+
+        function deletePeriod(id, name) {
+            if (confirm('Delete period "' + name + '"? This action cannot be undone.')) {
+                $.ajax({
+                    url: '@Url.Action("FiscalPeriodDelete", "SystemSetup")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshPeriods(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function closePeriod(id, name) {
+            if (confirm('Close period "' + name + '"? This will prevent any further transactions in this period.')) {
+                $.ajax({
+                    url: '@Url.Action("ClosePeriod", "SystemSetup")',
+                    type: 'POST',
+                    data: { id: id, __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').val() },
+                    success: function(response) {
+                        if (response.success) { showToast('success', response.message); refreshPeriods(); }
+                        else { showToast('error', response.message); }
+                    }
+                });
+            }
+        }
+
+        function showToast(type, message) {
+            var bgClass = type === 'success' ? 'bg-success' : 'bg-danger';
+            var icon = type === 'success' ? 'check-circle' : 'alert-circle';
+            var toastHtml = '<div class="toast align-items-center text-white ' + bgClass + ' border-0 position-fixed bottom-0 end-0 m-3" style="z-index: 1100;"><div class="d-flex"><div class="toast-body"><i class="align-middle me-2" data-feather="' + icon + '"></i>' + message + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
+            $('body').append(toastHtml);
+            var toast = new bootstrap.Toast($('.toast').last());
+            toast.show();
+            setTimeout(function() { $('.toast').last().remove(); }, 3000);
+        }
+        // Load content when tab is shown
+        function loadWarehouses() {
+            $.ajax({
+                url: '@Url.Action("WarehousesList", "SystemSetup")',
+                type: 'GET',
+                success: function(response) {
+                    $('#warehousesContent').html(response);
+                    feather.replace();
+                }
+            });
+        }
+
+        function loadUnits() {
+            $.ajax({
+                url: '@Url.Action("UnitsList", "SystemSetup")',
+                type: 'GET',
+                success: function(response) {
+                    $('#unitsContent').html(response);
+                    feather.replace();
+                }
+            });
+        }
+
+        function loadFiscalPeriods() {
+            $.ajax({
+                url: '@Url.Action("FiscalPeriodsList", "SystemSetup")',
+                type: 'GET',
+                success: function(response) {
+                    $('#fiscalContent').html(response);
+                    feather.replace();
+                }
+            });
+        }
+                function submitSetupForm() {
+            var form = $('#setupForm');
+            var formData = form.serialize();
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var url = form.attr('action');
+
+            $.ajax({
+                url: url,
+                type: 'POST',
+                data: formData,
+                headers: { 'RequestVerificationToken': token },
+                success: function(response) {
+                    if (response.success) {
+                        $('#setupModal').modal('hide');
+                        showToast('success', response.message);
+                        // Refresh current tab
+                        if ($('#warehouses-tab').hasClass('active')) refreshWarehouses();
+                        if ($('#units-tab').hasClass('active')) refreshUnits();
+                        if ($('#fiscal-tab').hasClass('active')) refreshPeriods();
+                    } else {
+                        showToast('error', response.message);
+                    }
+                },
+                error: function(xhr) {
+                    if (xhr.status === 400) {
+                        $('#setupModalBody').html(xhr.responseText);
+                        feather.replace();
+                    } else {
+                        showToast('error', 'An error occurred.');
+                    }
+                }
+            });
+        }
+        // Load active tab content on page load
+        $(document).ready(function() {
+            loadWarehouses();
+
+            // Load content when tabs are clicked
+            $('#warehouses-tab').on('shown.bs.tab', function() {
+                if ($('#warehousesContent').html().includes('spinner')) {
+                    loadWarehouses();
+                }
+            });
+
+            $('#units-tab').on('shown.bs.tab', function() {
+                if ($('#unitsContent').html().includes('spinner')) {
+                    loadUnits();
+                }
+            });
+
+            $('#fiscal-tab').on('shown.bs.tab', function() {
+                if ($('#fiscalContent').html().includes('spinner')) {
+                    loadFiscalPeriods();
+                }
+            });
+        });
+    </script>
+}

@@ -1,49 +1,539 @@
 ﻿<!DOCTYPE html>
 <html lang="en">
+
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>@ViewData["Title"] - Store_Management_System</title>
-    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
-    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
-    <link rel="stylesheet" href="~/Store_Management_System.styles.css" asp-append-version="true" />
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="Inventory Management System">
+    <meta name="author" content="YourCompany">
+    <meta name="keywords" content="inventory, management, admin, dashboard">
+    <!-- jsVectorMap for maps -->
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+
+    <!-- Load app.js as a module -->
+    <script type="module" src="~/js/app.js"></script>
+    <script type="module" src="~/js/site.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/jvectormap-next@3.1.0/jquery-jvectormap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/jvectormap-next@3.1.0/jquery-jvectormap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jvectormap-next@3.1.0/jquery-jvectormap-world-mill.js"></script>
+
+    <link rel="preconnect" href="https://fonts.gstatic.com">
+    <link rel="shortcut icon" href="~/img/icons/icon-48x48.png" />
+
+    <title>@ViewData["Title"] - Inventory Management System</title>
+
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+    <!-- AdminKit CSS (requires download) -->
+    <link href="~/css/app.css" rel="stylesheet">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&display=swap" rel="stylesheet">
+
+    <!-- Feather Icons -->
+    <script src="https://cdn.jsdelivr.net/npm/feather-icons/dist/feather.min.js"></script>
+
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+    <!-- Flatpickr for calendar -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+  
+    <!-- SimpleBar for sidebar scrolling -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/simplebar@5.3.6/dist/simplebar.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/simplebar@5.3.6/dist/simplebar.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+    <style>
+        /* Fix scrolling - Sidebar fixed, content scrolls independently */
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .wrapper {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Sidebar - Fixed position, scrolls internally if needed */
+        .sidebar {
+            min-width: 250px;
+            max-width: 250px;
+            background: #2c3e50;
+            color: #fff;
+            height: 100vh;
+            position: relative;
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+        /* Sidebar content scrolling (if content overflows) */
+        .sidebar-content {
+            height: 100%;
+            overflow-y: auto;
+        }
+
+        /* Main content area - This scrolls independently */
+        .main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Top navbar - Fixed at top */
+        .navbar-bg {
+            flex-shrink: 0;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        /* Content area - This scrolls! */
+        .content {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: 0;
+        }
+
+        /* Footer - Fixed at bottom */
+        .footer {
+            flex-shrink: 0;
+            background: #fff;
+            border-top: 1px solid #dee2e6;
+            padding: 1rem 0;
+        }
+
+        /* Ensure cards and content look good when scrolling */
+        .container-fluid {
+            padding: 1.5rem;
+        }
+
+        /* Fix for simplebar on sidebar */
+        .js-simplebar {
+            height: 100%;
+        }
+
+        /* Submenu styling for collapsible parent items */
+        .sidebar-item.has-children > .sidebar-link {
+            cursor: pointer;
+        }
+
+        .sidebar-submenu {
+            display: none;
+            padding-left: 0.5rem;
+            margin-top: 0.25rem;
+        }
+
+        .sidebar-item.has-children.open > .sidebar-submenu {
+            display: block;
+        }
+
+        .sidebar-item.has-children .align-middle[data-feather="chevron-down"] {
+            transition: transform 0.2s ease;
+        }
+
+        .sidebar-item.has-children.open .align-middle[data-feather="chevron-down"] {
+            transform: rotate(180deg);
+        }
+    </style>
 </head>
+
 <body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm navbar-light bg-white border-bottom box-shadow mb-3">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">Store_Management_System</a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Index">Home</a>
+    <!-- PDF Viewer Modal -->
+    <div class="modal fade" id="pdfModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="align-middle" data-feather="file-text"></i> Invoice Preview
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0" style="height: 80vh;">
+                    <iframe id="pdfFrame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a id="downloadPdfLink" href="#" class="btn btn-primary" download>
+                        <i class="align-middle" data-feather="download"></i> Download PDF
+                    </a>
+                    <button type="button" class="btn btn-success" onclick="window.print()">
+                        <i class="align-middle" data-feather="printer"></i> Print
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Global Confirmation Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title" id="confirmModalTitle">Confirm Action</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="confirmModalMessage">
+                    Are you sure you want to perform this action?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirmModalOk">Yes, Proceed</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- Global Loading Spinner -->
+    <div id="loadingSpinner" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 9999; text-align: center; padding-top: 20%;">
+        <div class="spinner-border text-primary" role="status" style="width: 4rem; height: 4rem;">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+        <div class="mt-3 text-white">Processing...</div>
+    </div>
+    <div class="wrapper">
+        <!-- Sidebar -->
+        <nav id="sidebar" class="sidebar js-sidebar">
+            <div class="sidebar-content js-simplebar">
+                <a class="sidebar-brand" asp-controller="Home" asp-action="Index">
+                    <span class="align-middle">InventoryMS</span>
+                </a>
+
+                <ul class="sidebar-nav">
+                    <!-- ============================================ -->
+                    <!-- 1. MAIN NAVIGATION -->
+                    <!-- ============================================ -->
+                    <li class="sidebar-header">Main</li>
+
+                    <li class="sidebar-item @(ViewContext.RouteData.Values["Controller"]?.ToString() == "Home" ? "active" : "")">
+                        <a class="sidebar-link" asp-controller="Home" asp-action="Index">
+                            <i class="align-middle" data-feather="sliders"></i>
+                            <span class="align-middle">Dashboard</span>
+                        </a>
+                    </li>
+
+                    @{ var currentController = ViewContext.RouteData.Values["Controller"]?.ToString(); }
+
+                    @{ 
+                        var sysChildren = new[] { "SystemSetup", "Articles", "Categories", "Customers", "Suppliers", "BeginningBalance" };
+                        var sysOpen = sysChildren.Contains(currentController);
+                    }
+
+                    <li class="sidebar-header">System Setup</li>
+                    <li class="sidebar-item has-children @(sysOpen ? "open" : "")" aria-expanded="@(sysOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="sys-setup-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="settings"></i>
+                                <span class="align-middle">System Setup</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
+                        </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="sys-setup-submenu" style="display: @(sysOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "SystemSetup" ? "active" : "")"><a class="sidebar-link" asp-controller="SystemSetup" asp-action="Index"><span class="align-middle">System Setup</span></a></li>
+                            <li class="sidebar-item @(currentController == "Articles" ? "active" : "")"><a class="sidebar-link" asp-controller="Articles" asp-action="Index"><span class="align-middle">Articles</span></a></li>
+                            <li class="sidebar-item @(currentController == "Categories" ? "active" : "")"><a class="sidebar-link" asp-controller="Categories" asp-action="Index"><span class="align-middle">Categories</span></a></li>
+                            <li class="sidebar-item @(currentController == "Customers" ? "active" : "")"><a class="sidebar-link" asp-controller="Customers" asp-action="Index"><span class="align-middle">Customers</span></a></li>
+                            <li class="sidebar-item @(currentController == "Suppliers" ? "active" : "")"><a class="sidebar-link" asp-controller="Suppliers" asp-action="Index"><span class="align-middle">Suppliers</span></a></li>
+                            <li class="sidebar-item @(currentController == "BeginningBalance" ? "active" : "")"><a class="sidebar-link" asp-controller="BeginningBalance" asp-action="Index"><span class="align-middle">Beginning Balance</span></a></li>
+                        </ul>
+                    </li>
+
+                    @{ 
+                        var purchaseChildren = new[] { "PurchaseOrders", "GoodsReceipts", "Returns" };
+                        var purchaseOpen = purchaseChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Purchase Transactions</li>
+                    <li class="sidebar-item has-children @(purchaseOpen ? "open" : "")" aria-expanded="@(purchaseOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="purchase-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="shopping-cart"></i>
+                                <span class="align-middle">Purchase Transactions</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
+                        </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="purchase-submenu" style="display: @(purchaseOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "PurchaseOrders" ? "active" : "")"><a class="sidebar-link" asp-controller="PurchaseOrders" asp-action="Index"><span class="align-middle">Purchase Orders</span></a></li>
+                            <li class="sidebar-item @(currentController == "GoodsReceipts" ? "active" : "")"><a class="sidebar-link" asp-controller="GoodsReceipts" asp-action="Index"><span class="align-middle">Goods Receipts</span></a></li>
+                            <li class="sidebar-item @(currentController == "Returns" ? "active" : "")"><a class="sidebar-link" asp-controller="Returns" asp-action="Index"><span class="align-middle">Purchase Returns</span></a></li>
+                        </ul>
+                    </li>
+
+                    @{ 
+                        var salesChildren = new[] { "SalesOrders", "Invoices", "CustomerReturns" };
+                        var salesOpen = salesChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Sales Transactions</li>
+                    <li class="sidebar-item has-children @(salesOpen ? "open" : "")" aria-expanded="@(salesOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="sales-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="shopping-bag"></i>
+                                <span class="align-middle">Sales Transactions</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
+                        </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="sales-submenu" style="display: @(salesOpen ? "block" : "none")">
+
+                            <li class="sidebar-item @(currentController == "SalesOrders" ? "active" : "")"><a class="sidebar-link" asp-controller="SalesOrders" asp-action="Index"><span class="align-middle">Sales Orders</span></a></li>
+                            <li class="sidebar-item @(currentController == "Invoices" ? "active" : "")"><a class="sidebar-link" asp-controller="Invoices" asp-action="Index"><span class="align-middle">Invoices</span></a></li>
+                            <li class="sidebar-item @(currentController == "CustomerReturns" ? "active" : "")"><a class="sidebar-link" asp-controller="CustomerReturns" asp-action="Index"><span class="align-middle">Customer Returns</span></a></li>
+                         
+                        </ul>
+                    </li>
+
+                    @{ 
+                        var invChildren = new[] { "StockAdjustments" };
+                        var invOpen = invChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Inventory Adjustments</li>
+                    <li class="sidebar-item has-children @(invOpen ? "open" : "")" aria-expanded="@(invOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="inv-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="refresh-cw"></i>
+                                <span class="align-middle">Inventory Adjustments</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
+                        </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="inv-submenu" style="display: @(invOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "StockAdjustments" ? "active" : "")"><a class="sidebar-link" asp-controller="StockAdjustments" asp-action="Index"><span class="align-middle">Stock Adjustments</span></a></li>
+                        </ul>
+                    </li>
+
+                    @{ 
+                        var reportsChildren = new[] { "Reports", "AIIntelligence", "MLTraining" };
+                        var reportsOpen = reportsChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Reports & Analytics</li>
+                    <li class="sidebar-item has-children @(reportsOpen ? "open" : "")" aria-expanded="@(reportsOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="reports-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="bar-chart-2"></i>
+                                <span class="align-middle">Reports & Analytics</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
+                        </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="reports-submenu" style="display: @(reportsOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "Reports" ? "active" : "")"><a class="sidebar-link" asp-controller="Reports" asp-action="Index"><span class="align-middle">Inventory Reports</span></a></li>
+                            <li class="sidebar-item @(currentController == "AIIntelligence" ? "active" : "")"><a class="sidebar-link" asp-controller="AIIntelligence" asp-action="Index"><span class="align-middle">AI Intelligence</span></a></li>
+                            <li class="sidebar-item @(currentController == "MLTraining" ? "active" : "")"><a class="sidebar-link" asp-controller="MLTraining" asp-action="Index"><span class="align-middle">AI Training</span></a></li>
+                        </ul>
+                    </li>
+
+                    @if (User.IsInRole("Admin"))
+                    {
+                        var adminChildren = new[] { "ActivityLogs" };
+                        var adminOpen = adminChildren.Contains(currentController);
+                        <li class="sidebar-header">Administration</li>
+                        <li class="sidebar-item has-children @(adminOpen ? "open" : "")" aria-expanded="@(adminOpen.ToString().ToLower())">
+                            <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="admin-submenu">
+                                <span class="d-flex align-items-center w-100">
+                                    <i class="align-middle me-2" data-feather="clock"></i>
+                                    <span class="align-middle">Administration</span>
+                                    <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                                </span>
+                            </a>
+                            <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="admin-submenu" style="display: @(adminOpen ? "block" : "none")">
+                                <li class="sidebar-item @(currentController == "ActivityLogs" ? "active" : "")"><a class="sidebar-link" asp-controller="ActivityLogs" asp-action="Index"><span class="align-middle">Activity Logs</span></a></li>
+                            </ul>
                         </li>
-                        <li class="nav-item">
-                            <a class="nav-link text-dark" asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
+                    }
+
+                    @{ 
+                        var accountChildren = new[] { "Profile" };
+                        var accountOpen = accountChildren.Contains(currentController);
+                    }
+                    <li class="sidebar-header">Account</li>
+                    <li class="sidebar-item has-children @(accountOpen ? "open" : "")" aria-expanded="@(accountOpen.ToString().ToLower())">
+                        <a class="sidebar-link sidebar-parent-toggle" href="#" role="button" aria-controls="account-submenu">
+                            <span class="d-flex align-items-center w-100">
+                                <i class="align-middle me-2" data-feather="user"></i>
+                                <span class="align-middle">Account</span>
+                                <i class="align-middle ms-auto" data-feather="chevron-down"></i>
+                            </span>
+                        </a>
+                        <ul class="sidebar-submenu list-unstyled ps-3 mb-0" id="account-submenu" style="display: @(accountOpen ? "block" : "none")">
+                            <li class="sidebar-item @(currentController == "Profile" ? "active" : "")"><a class="sidebar-link" asp-controller="Profile" asp-action="Index"><span class="align-middle">My Profile</span></a></li>
+                            <li class="sidebar-item"><a class="sidebar-link" asp-controller="Profile" asp-action="ChangePassword"><span class="align-middle">Change Password</span></a></li>
+                        </ul>
+                    </li>
+                </ul>
+
+                @* <!-- Sidebar CTA (Optional - can remove if not needed) -->
+                <div class="sidebar-cta">
+                    <div class="sidebar-cta-content">
+                        <strong class="d-inline-block mb-2">Need Help?</strong>
+                        <div class="mb-3 text-sm">
+                            Contact support for assistance with your inventory management.
+                        </div>
+                        <div class="d-grid">
+                            <a href="#" class="btn btn-primary">Contact Support</a>
+                        </div>
+                    </div>
+                </div> *@
+            </div>
+        </nav>
+
+        <div class="main">
+            <!-- Top Navbar -->
+            <nav class="navbar navbar-expand navbar-light navbar-bg">
+                <a class="sidebar-toggle js-sidebar-toggle" id="sidebarCollapse">
+                    <i class="hamburger align-self-center"></i>
+                </a>
+
+                <div class="navbar-collapse collapse">
+                    <ul class="navbar-nav navbar-align">
+                        <!-- Notifications Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-icon dropdown-toggle" href="#" id="alertsDropdown" data-bs-toggle="dropdown">
+                                <div class="position-relative">
+                                    <i class="align-middle" data-feather="bell"></i>
+                                    <span class="indicator">4</span>
+                                </div>
+                            </a>
+                            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-end py-0" aria-labelledby="alertsDropdown">
+                                <div class="dropdown-menu-header">
+                                    4 New Notifications
+                                </div>
+                                <div class="list-group">
+                                    <a href="#" class="list-group-item">
+                                        <div class="row g-0 align-items-center">
+                                            <div class="col-2">
+                                                <i class="text-danger" data-feather="alert-circle"></i>
+                                            </div>
+                                            <div class="col-10">
+                                                <div class="text-dark">Update completed</div>
+                                                <div class="text-muted small mt-1">30m ago</div>
+                                            </div>
+                                        </div>
+                                    </a>
+                                </div>
+                                <div class="dropdown-menu-footer">
+                                    <a href="#" class="text-muted">Show all notifications</a>
+                                </div>
+                            </div>
+                        </li>
+
+                        <!-- User Dropdown -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-icon dropdown-toggle d-inline-block d-sm-none" href="#" data-bs-toggle="dropdown">
+                                <i class="align-middle" data-feather="settings"></i>
+                            </a>
+
+                            <a class="nav-link dropdown-toggle d-none d-sm-inline-block" href="#" data-bs-toggle="dropdown">
+                                <img src="~/img/avatars/avatar.jpg" class="avatar img-fluid rounded me-1" alt="User" />
+                                <span class="text-dark">@User.Identity.Name</span>
+                            </a>
+
+                            <div class="dropdown-menu dropdown-menu-end">
+                                <a class="dropdown-item" asp-controller="Profile" asp-action="Index">
+                                    <i class="align-middle me-1" data-feather="user"></i> Profile
+                                </a>
+                                <div class="dropdown-divider"></div>
+                                <form asp-controller="Account" asp-action="Logout" method="post">
+                                    <button type="submit" class="dropdown-item" style="background: none; border: none; width: 100%; text-align: left;">
+                                        <i class="align-middle me-1" data-feather="log-out"></i> Log out
+                                    </button>
+                                </form>
+                            </div>
                         </li>
                     </ul>
                 </div>
-            </div>
-        </nav>
-    </header>
-    <div class="container">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
+            </nav>
+
+            <!-- Main Content - THIS SCROLLS INDEPENDENTLY -->
+            <main class="content">
+                <div class="container-fluid">
+                    @RenderBody()
+                </div>
+            </main>
+
+            <!-- Footer -->
+            <footer class="footer">
+                <div class="container-fluid">
+                    <div class="row text-muted">
+                        <div class="col-6 text-start">
+                            <p class="mb-0">
+                                <a class="text-muted" href="#"><strong>AdminKit</strong></a> &copy; @DateTime.Now.Year
+                            </p>
+                        </div>
+                        <div class="col-6 text-end">
+                            <ul class="list-inline">
+                                <li class="list-inline-item">
+                                    <a class="text-muted" href="#">Support</a>
+                                </li>
+                                <li class="list-inline-item">
+                                    <a class="text-muted" href="#">Privacy</a>
+                                </li>
+                                <li class="list-inline-item">
+                                    <a class="text-muted" href="#">Terms</a>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </footer>
+        </div>
     </div>
 
-    <footer class="border-top footer text-muted">
-        <div class="container">
-            &copy; 2026 - Store_Management_System - <a asp-area="" asp-controller="Home" asp-action="Privacy">Privacy</a>
-        </div>
-    </footer>
-    <script src="~/lib/jquery/dist/jquery.min.js"></script>
-    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="~/js/site.js" asp-append-version="true"></script>
+    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+ 
+
+    <script>
+                // Suppress extension-related errors
+        window.addEventListener('error', function(e) {
+            if (e.message && e.message.includes('listener indicated an asynchronous response')) {
+                e.preventDefault();
+                e.stopPropagation();
+                return false;
+            }
+        });
+
+        // Also suppress unhandled promise rejections from extensions
+        window.addEventListener('unhandledrejection', function(e) {
+            if (e.reason && e.reason.message && e.reason.message.includes('listener indicated an asynchronous response')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+        // Initialize Feather Icons (this can stay here)
+        feather.replace();
+
+        // Initialize sidebar toggle
+        document.addEventListener("DOMContentLoaded", function() {
+            var sidebarToggle = document.querySelector(".js-sidebar-toggle");
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener("click", function() {
+                    document.querySelector("#sidebar").classList.toggle("collapsed");
+                });
+            }
+
+            // Initialize collapsible submenu toggles
+            document.querySelectorAll('.sidebar-parent-toggle').forEach(function(toggle) {
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var parent = toggle.closest('.has-children');
+                    if (!parent) return;
+                    var submenu = parent.querySelector('.sidebar-submenu');
+                    var isOpen = parent.classList.toggle('open');
+                    if (submenu) {
+                        submenu.style.display = isOpen ? 'block' : 'none';
+                    }
+                    // update aria-expanded
+                    parent.setAttribute('aria-expanded', isOpen.toString());
+                });
+            });
+        });
+    </script>
+
     @await RenderSectionAsync("Scripts", required: false)
 </body>
 </html>

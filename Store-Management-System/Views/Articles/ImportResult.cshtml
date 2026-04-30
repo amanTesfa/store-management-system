@@ -1,0 +1,82 @@
+﻿@using Store_Management_System.DTOs
+@model ImportResult
+@{
+    ViewData["Title"] = "Import Results";
+}
+
+<div class="mb-3">
+    <h1 class="h3 d-inline align-middle">Import Results</h1>
+    <span class="badge bg-dark text-white ms-2">Summary</span>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card border-success">
+            <div class="card-body text-center">
+                <h5 class="text-success mb-2">✅ Successful</h5>
+                <h2 class="mb-0">@Model.SuccessCount</h2>
+                <small class="text-muted">articles imported</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-danger">
+            <div class="card-body text-center">
+                <h5 class="text-danger mb-2">❌ Failed</h5>
+                <h2 class="mb-0">@Model.FailureCount</h2>
+                <small class="text-muted">records failed</small>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card border-info">
+            <div class="card-body text-center">
+                <h5 class="text-info mb-2">📊 Total</h5>
+                <h2 class="mb-0">@Model.TotalRows</h2>
+                <small class="text-muted">records processed</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.Errors.Any())
+{
+    <div class="card mt-4 border-danger">
+        <div class="card-header bg-danger text-white">
+            <h5 class="card-title mb-0">Error Details</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Error</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Errors.Count; i++)
+                        {
+                            <tr>
+                                <td>@(i + 1)</td>
+                                <td class="text-danger">@Model.Errors[i]</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="mt-4 d-flex gap-2">
+    <a asp-action="Import" class="btn btn-primary">
+        <i class="align-middle" data-feather="upload"></i> Import More
+    </a>
+    <a asp-action="Index" class="btn btn-secondary">
+        <i class="align-middle" data-feather="list"></i> View Articles
+    </a>
+    <a asp-action="Create" class="btn btn-outline-primary">
+        <i class="align-middle" data-feather="plus"></i> Add Single Article
+    </a>
+</div>
